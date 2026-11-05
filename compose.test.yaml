@@ -1,0 +1,31 @@
+# Use only with -p yu-test and a separate .env.nas.test (POSTGRES_DB=yu_test).
+services:
+  app:
+    image: yu-app
+    environment:
+      OIDC_ALLOW_INSECURE_HTTP: "true"
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+    labels:
+      - traefik.enable=false
+  migrate:
+    image: yu-migrate
+  mock-oidc:
+    image: yu-oidc-test
+    build:
+      context: .
+      target: oidc-test
+    environment:
+      MOCK_OIDC_ENABLED: "true"
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      APP_ORIGIN: ${APP_ORIGIN}
+    labels:
+      - traefik.enable=false
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3102/.well-known/openid-configuration').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
