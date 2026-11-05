@@ -54,7 +54,7 @@ summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 
 镜像地址为 `ghcr.io/662/yu`（应用）和 `ghcr.io/662/yu-migrator`（数据库迁移），提供 `linux/amd64`、`linux/arm64`。两个镜像来自同一个提交；跨镜像标签更新不具备原子性，定时获取端应等两个对应 SHA 标签都可用后再部署，或使用成功工作流摘要中的两个 digest，避免混用版本。
 
-镜像由工作流的 `GITHUB_TOKEN` 发布，仅发布 job 获得 `packages: write`；PR 不登录 GHCR、不获取镜像写入权限，不使用 `pull_request_target` 运行贡献者代码。第三方镜像 Actions 固定到提交 SHA。
+镜像由工作流的 `GITHUB_TOKEN` 发布，仅发布 job 获得 `packages: write`；PR 不登录 GHCR、不获取镜像写入权限，不使用 `pull_request_target` 运行贡献者代码。工作流 Actions 使用 Node.js 24 运行时并固定到提交 SHA。
 
 GHCR 新包默认私有，公开仓库不意味着包自动公开。首次成功推送后，维护者需在两个包的 Package settings 中分别将可见性设为 Public，才能匿名拉取。数据库连接、OIDC 密钥及其他部署配置只在部署端提供，不传入 CI 或镜像构建。各镜像 digest 记录在 Actions 摘要中，构建缓存用于后续发布加速。
 
