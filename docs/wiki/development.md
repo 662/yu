@@ -27,30 +27,17 @@ summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 
 ## 检查命令与覆盖边界
 
-`pnpm check` 依次运行 lint、类型检查、业务单元测试、备份单元测试和生产构建。`pnpm test` 覆盖金额、账户、交易、分类、导入、同步竞态、账号切换、日志脱敏及大账本汇总。`pnpm test:backup` 不连接真实数据库，验证失败保护、保留策略、权限及文件名冲突。
+`pnpm check` 依次运行 lint、类型检查、业务单元测试、备份单元测试和生产构建。`pnpm test` 覆盖金额、账户、交易、分类、导入、同步竞态、账号切换、日志脱敏及汇总一致性。`pnpm test:backup` 不连接真实数据库，验证失败保护、保留策略、权限及文件名冲突。
 
 `pnpm bench` 输出 1000、10000、100000 笔的聚合耗时和 JSON 大小，用于测量完整快照同步的代价，不代表生产容量或延迟承诺。
 
-`pnpm test:integration` 使用当前 Docker context，可用 `YU_TEST_DOCKER_CONTEXT` 指定。它仅读取 `compose.ci.yaml`，创建唯一命名隔离项目，不读取正式环境配置、不发布端口、不使用正式网络和数据卷，结束后清理自己的容器与卷。覆盖认证与隔离、并发版本、分类迁移、导入撤销、500 笔批量导入、超过 65535 笔的账本读写、条件同步和完整备份恢复。
+`pnpm test:integration` 使用当前 Docker context，可用 `YU_TEST_DOCKER_CONTEXT` 指定。它仅读取 `compose.ci.yaml`，创建唯一命名隔离项目，不读取正式环境配置、不发布端口、不使用正式网络和数据卷，结束后清理自己的容器与卷。覆盖认证与隔离、并发版本、基线初始化与接续、导入撤销、条件同步和完整备份恢复。
 
-集成执行顺序见 `scripts/run-integration-suites.sh`：分类迁移测试、基础集成、导入集成、大账本测试。`test-import.mjs` 依赖基础集成先建立测试用户和账户，不应脱离前置条件连接任意库运行。
+集成执行顺序见 `scripts/run-integration-suites.sh`：数据库迁移、基础集成、导入集成。单元测试覆盖业务规则与异常组合，集成测试聚焦真实数据库、认证隔离、持久化、并发与恢复，不重复穷举纯业务规则。`test-import.mjs` 依赖基础集成先建立测试用户和账户，不应脱离前置条件连接任意库运行。
 
-GitHub Actions 的 push / pull request 工作流包含质量检查、基准与隔离集成。配置存在不等于本次已经执行或通过；交付时说明实际运行的检查。
+本地与 CI 共用 `compose.ci.yaml` 和 `pnpm test:integration`，无需维护另一套继承正式部署的手动测试环境。测试身份服务只用于隔离项目，生产 runner 不包含它。
 
-## 保留的手动测试环境
-
-`compose.test.yaml` 是基于正式 Compose 的显式测试覆盖文件，使用独立 `yu-test` 项目和 `yu_test` 数据库，另含 RSA 签名的模拟 OIDC 服务；生产 runner 镜像不包含该服务。
-
-如需使用此方式，`.env.nas.test` 配置独立数据库账号密码、`APP_ORIGIN=http://localhost:3101`、`OIDC_ISSUER=http://mock-oidc:3102`、`OIDC_CLIENT_ID=yu-test` 和随机测试密钥，并提供用于 Compose 插值的 `APP_HOST=book.example.com`、`TRAEFIK_CERT_RESOLVER=test`（此环境禁用 Traefik 路由）。只能在独立环境使用，集成脚本按全新测试库执行一次。
-
-```bash
-docker --context nas compose --env-file .env.nas build
-docker --context nas compose -p yu-test -f compose.yaml -f compose.test.yaml --env-file .env.nas.test build mock-oidc
-docker --context nas compose -p yu-test -f compose.yaml -f compose.test.yaml --env-file .env.nas.test up -d --no-build --wait
-docker --context nas compose -p yu-test -f compose.yaml -f compose.test.yaml --env-file .env.nas.test exec -T app node --input-type=module < scripts/integration.mjs
-```
-
-日常自动验证优先使用不读取正式配置的 `pnpm test:integration`。手动环境结束后仅清理对应测试项目的容器与卷。
+`pnpm test:scale` 在同一隔离环境中追加 500 笔原子导入及超过 65535 笔的账本读写回归。大账本测试与 `pnpm bench` 在每周 GitHub Actions 和手动触发时执行；push / pull request 保留质量检查及核心集成。配置存在不等于本次已经执行或通过；交付时说明实际运行的检查。
 
 ## Wiki 维护
 
@@ -66,5 +53,5 @@ Wiki 内相对链接转成 `/wiki` 地址；仓库外部引用仅按 `src/featur
 
 ## 工具与验证依据
 
-[开发数据库](../../compose.dev.yaml)、[自动集成入口](../../scripts/test-integration.sh)、[集成 Compose](../../compose.ci.yaml)、[手动测试覆盖](../../compose.test.yaml)、[测试顺序](../../scripts/run-integration-suites.sh)、[迁移校验](../../scripts/test-category-migration.mjs)、[基准](../../scripts/bench-book.ts)、[CI](../../.github/workflows/ci.yml)。
+[开发数据库](../../compose.dev.yaml)、[自动集成入口](../../scripts/test-integration.sh)、[集成 Compose](../../compose.ci.yaml)、[测试顺序](../../scripts/run-integration-suites.sh)、[迁移校验](../../scripts/test-database.mjs)、[基准](../../scripts/bench-book.ts)、[CI](../../.github/workflows/ci.yml)。
 

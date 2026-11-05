@@ -12,11 +12,16 @@ FROM dependencies AS builder
 COPY . .
 RUN pnpm build
 
-FROM dependencies AS migrator
+FROM dependencies AS migration-builder
+COPY scripts/migrate.ts ./scripts/migrate.ts
 COPY src/lib/logging.ts ./src/lib/logging.ts
+RUN pnpm exec esbuild scripts/migrate.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=/app/migrate.cjs
+
+FROM base AS migrator
+COPY --from=migration-builder /app/migrate.cjs ./migrate.cjs
 COPY drizzle ./drizzle
-COPY scripts ./scripts
-CMD ["pnpm", "db:migrate"]
+USER node
+CMD ["node", "migrate.cjs"]
 
 FROM dependencies AS integration-test
 COPY scripts ./scripts

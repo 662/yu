@@ -49,6 +49,6 @@ summary: 解释金额、复式分录、余额、垫付报销及分类生命周�
 
 ## 实现与验证入口
 
-[领域规则](../../src/features/book/ledger.ts)、[命令校验与分类操作](../../src/features/book/commands.ts)、[预设分类](../../src/features/book/categories.ts)、[统计展示](../../src/features/book/book-app.tsx)、[数据库平衡约束](../../drizzle/0000_simple_thunderbird.sql)。
+[领域规则](../../src/features/book/ledger.ts)、[命令校验与分类操作](../../src/features/book/commands.ts)、[预设分类](../../src/features/book/categories.ts)、[统计展示](../../src/features/book/book-app.tsx)、[数据库平衡约束](../../drizzle/0000_baseline.sql)。
 
 对应测试：[记账](../../src/features/book/ledger.test.ts)、[命令](../../src/features/book/commands.test.ts)、[分类](../../src/features/book/categories.test.ts)、[汇总](../../src/features/book/summary.test.ts)。

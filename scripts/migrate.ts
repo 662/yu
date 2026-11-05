@@ -1,6 +1,5 @@
 import { logServerError } from "../src/lib/logging";
 import { loadEnvConfig } from "@next/env";
-import { existsSync } from "node:fs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
@@ -15,10 +14,6 @@ async function main() {
   });
   try {
     await pool.query("select 1");
-    if (!existsSync("drizzle/meta/_journal.json")) {
-      console.log("数据库连接成功，当前尚无迁移。");
-      return;
-    }
     await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
     console.log("数据库迁移完成。");
   } finally {

@@ -27,7 +27,7 @@ summary: 说明 OIDC 配置、登录流程、会话和账本隔离边界。
 | 退出回调 URI | `https://book.example.com/login` |
 | 应用 Origin | `https://book.example.com` |
 
-`OIDC_ISSUER` 必须与 discovery 返回的 issuer 一致，浏览器与应用容器都需可达。`APP_ORIGIN` 用来构造回调、退出地址并校验写入来源。开发使用单独客户端和精确的本地回调，不扩大正式客户端回调范围。第三方登录、密码和账号管理由身份服务提供；旧 `/setup`、`/password` 页面不提供本地账号体系。
+`OIDC_ISSUER` 必须与 discovery 返回的 issuer 一致，浏览器与应用容器都需可达。`APP_ORIGIN` 用来构造回调、退出地址并校验写入来源。开发使用单独客户端和精确的本地回调，不扩大正式客户端回调范围。第三方登录、密码和账号管理由身份服务提供；应用不再保留旧 `/setup`、`/password` 页面。
 
 ## 登录与会话
 

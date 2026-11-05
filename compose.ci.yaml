@@ -60,7 +60,9 @@ services:
     build:
       context: .
       target: integration-test
-    environment: *test-environment
+    environment:
+      <<: *test-environment
+      YU_TEST_SCALE: ${YU_TEST_SCALE:-false}
     depends_on:
       app:
         condition: service_healthy
