@@ -48,6 +48,8 @@
   "src/features/import/parser.ts",
   "src/features/import/pdf.ts",
   "src/features/import/preview.ts",
+  "src/features/import/review.test.ts",
+  "src/features/import/review.ts",
   "src/features/import/types.ts",
   "src/lib/auth.ts",
   "src/lib/http.ts",

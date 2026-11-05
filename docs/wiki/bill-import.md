@@ -30,8 +30,11 @@ PDF 根据表头坐标划列：借记卡按相邻记账日期之间的中线分�
 
 原始支付方式映射到已有账户，只有尾号或名称唯一匹配时才建议账户；未知或多义匹配需要手工选择。分类取当前启用分类并给出可修改建议。
 
-退款、冲正、中性交易、充值、提现、理财等需要复核，默认跳过；用户可改成普通支出、收入、转账或还款。转账和还款仍需两个有效账户，并遵守[记账规则](ledger.md)。坏行、已导入来源标识、文件内重复标识禁止选择；疑似重复允许用户明确保留。
+预览按普通收支、退款与冲正、资金往来、信用卡还款、疑似重复、无法导入分组，可再按支付方式和原始分类缩小批量处理范围。普通收支默认选择入账；特殊记录初始为“尚未决定”，与用户主动“跳过”区分。坏行、已导入来源标识、文件内重复标识归为无法导入，禁止选择；疑似重复允许用户明确保留。
 
+批量设置作用于当前分组及支付方式、原始分类范围的所有页，不受明细状态筛选影响。可重复调整批量设置，但不会覆盖单独修改过的记录。保留原收支时逐笔沿用账单方向；转账和还款需指定两个有效账户，并遵守[记账规则](ledger.md)。退款可暂不导入并手动修正原账，选择记为收入会增加收入统计。明细仍可逐笔修改，缺少账户或分类的已选记录可集中筛选补全。
+
+已选、尚未决定、主动跳过、无法导入与本次预览已导入的计数分别展示；只有已选记录参与入账。确认前显示本批笔数与金额及排除的记录数。超过 500 笔按文件顺序分批确认，每批成功后保留剩余预览和已选设置，生成新的批次 ID；失败沿用原批次 ID 重试。结束预览或重新选文件会丢弃尚未入账的选择，已成功导入的批次保留。
 退款不自动关联或冲减原消费；平台与银行卡记录不自动合并。历史导入会改变账户余额；若建账户时用了今日余额，导入历史后应再次核对余额。
 
 ## 两种重复判断
@@ -54,6 +57,6 @@ PDF 根据表头坐标划列：借记卡按相邻记账日期之间的中线分�
 
 原文件和 PDF 密码只在浏览器解析；确认时提交规范化账目、文件名及去重标识。无订单标识可能包含原摘要，不应把导入元数据视为无敏感内容。Excel 与 PDF 库按需加载，PDF worker 同源提供。
 
-[文件读取](../../src/features/import/files.ts)、[解析](../../src/features/import/parser.ts)、[PDF](../../src/features/import/pdf.ts)、[预览](../../src/features/import/preview.ts)、[批次命令](../../src/features/import/commands.ts)、[签名与类型](../../src/features/import/types.ts)、[持久化](../../src/features/book/repository.ts)。
+[文件读取](../../src/features/import/files.ts)、[解析](../../src/features/import/parser.ts)、[PDF](../../src/features/import/pdf.ts)、[预览](../../src/features/import/preview.ts)、[分组与批量决策](../../src/features/import/review.ts)、[批次命令](../../src/features/import/commands.ts)、[签名与类型](../../src/features/import/types.ts)、[持久化](../../src/features/book/repository.ts)。
 
-验证入口：[导入单元测试](../../src/features/import/import.test.ts)、[导入集成测试](../../scripts/test-import.mjs)。格式资料出处保留在[导入研究资料](../bill-import-research.md)。
+验证入口：[导入单元测试](../../src/features/import/import.test.ts)、[分组与批量设置测试](../../src/features/import/review.test.ts)、[导入集成测试](../../scripts/test-import.mjs)。格式资料出处保留在[导入研究资料](../bill-import-research.md)。

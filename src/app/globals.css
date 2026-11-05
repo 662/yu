@@ -763,3 +763,8 @@ h1 { font-size: 28px; letter-spacing: 1px; font-weight: 600; line-height: 1.6; }
 .site-header nav { display: flex; align-items: center; gap: 6px; }
 @media (max-width: 1023px) { .site-header[data-workspace] { margin-left: 190px; } }
 @media (max-width: 767px) { .site-header, .site-header[data-workspace] { margin-left: 0; padding-inline: 16px; } }
+
+.import-review { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.import-review h3 { font-size: 14px; font-weight: 600; }
+.import-review p { font-size: 12px; color: var(--muted-foreground); line-height: 1.9; }
+.import-bulk-accounts[data-slot="field-group"] { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); width: 100%; gap: 14px; }

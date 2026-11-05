@@ -1,9 +1,10 @@
+import { classifyRow } from './review';
 import { activeCategories } from '../book/categories';
 import type { Book, TransactionInput } from '../book/ledger';
 import { receiptKey } from './commands';
 import type { BillRow, Source } from './types';
 export type Decision = 'auto' | 'skip' | 'expense' | 'income' | 'transfer' | 'repayment';
-export type RowEdit = { decision?: Decision; category?: string; from?: string; to?: string; note?: string };
+export type RowEdit = { bulk?: boolean; decision?: Decision; category?: string; from?: string; to?: string; note?: string };
 export function suggestCategory(book: Book, row: BillRow, kind: 'expense' | 'income') {
   const categories = activeCategories(book, kind); const text = `${row.category} ${row.peer} ${row.description}`;
   const exact = categories.find(c => row.category && (row.category === c.name || row.category.includes(c.name)));
@@ -33,5 +34,5 @@ export function previewRow(book: Book, source: Source, row: BillRow, mapping: Re
     to: kind === 'expense' ? '' : edit.to ?? (row.direction === 'income' ? account : ''),
     note: (edit.note ?? [row.peer, row.description].filter(v => v && v !== '/').join(' · ')).slice(0,200), reimbursable: false,
   };
-  return { key, input, reason, blocked, kind };
+  return { key, input, reason, blocked, kind, group: classifyRow(row, blocked, Boolean(similar)) };
 }
