@@ -16,7 +16,7 @@ services:
       POSTGRES_USER: yu_test
       POSTGRES_PASSWORD: isolated_test_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U yu_test -d yu_test"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U yu_test -d yu_test"]
       interval: 2s
       timeout: 3s
       retries: 30

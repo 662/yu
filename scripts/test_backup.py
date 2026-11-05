@@ -27,8 +27,17 @@ case " $* " in
   *pg_dump*) echo archive; [[ "${FAIL_DUMP:-0}" != 1 ]];;
   *'pg_restore --list'*) cat > /dev/null; [[ "${FAIL_LIST:-0}" != 1 ]];;
   *' run '*) echo isolated-container;;
-  *'pg_isready'*) exit 0;;
-  *'pg_restore '*) cat > /dev/null; [[ "${FAIL_RESTORE:-0}" != 1 ]];;
+  *'pg_isready'*)
+    if [[ "${SIMULATE_DB_INIT:-0}" == 1 ]]; then
+      # During initialization the socket responds, but the final TCP server is absent.
+      [[ " $* " == *' -h 127.0.0.1 '* ]] || exit 0
+      if [[ ! -f "$INIT_STATE_FILE" ]]; then touch "$INIT_STATE_FILE"; exit 1; fi
+      echo ready > "$INIT_STATE_FILE"
+    fi;;
+  *'pg_restore '*)
+    cat > /dev/null
+    if [[ "${SIMULATE_DB_INIT:-0}" == 1 ]]; then [[ "$(cat "$INIT_STATE_FILE" 2>/dev/null)" == ready ]] || exit 1; fi
+    [[ "${FAIL_RESTORE:-0}" != 1 ]];;
   *'psql '*) cat > /dev/null;;
   *' rm '*) exit 0;;
   *) exit 91;;
@@ -56,6 +65,10 @@ esac
 
     def test_failed_restore_never_prunes_previous_backups(self):
         self.assert_failure_preserves_old(YU_VERIFY_BACKUP='true', FAIL_RESTORE='1')
+
+    def test_restore_waits_until_database_initialization_finishes(self):
+        result = self.run_backup(YU_VERIFY_BACKUP='true', SIMULATE_DB_INIT='1', INIT_STATE_FILE=str(self.base / 'init-state'))
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_success_is_private_and_prunes_only_expired_archives(self):
         unrelated = self.backups / 'keep.dump'

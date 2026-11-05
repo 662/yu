@@ -9,7 +9,8 @@ trap cleanup EXIT
 container="$("${docker_cli[@]}" run -d --network none --label yu.backup-verification=true -e POSTGRES_HOST_AUTH_METHOD=trust "${YU_BACKUP_POSTGRES_IMAGE:-postgres:18}")"
 ready=false
 for ((attempt=0; attempt<60; attempt++)); do
-  if "${docker_cli[@]}" exec "$container" pg_isready -U postgres > /dev/null 2>&1; then ready=true; break; fi
+  # The image's temporary initialization server only accepts Unix sockets.
+  if "${docker_cli[@]}" exec "$container" pg_isready -h 127.0.0.1 -U postgres > /dev/null 2>&1; then ready=true; break; fi
   sleep 1
 done
 [[ "$ready" == true ]] || { echo '恢复验证数据库启动失败' >&2; exit 1; }
