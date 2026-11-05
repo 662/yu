@@ -315,6 +315,7 @@ function AboutDialog({ onClose, book, user, onManageCategories, onImport }: { on
     <div className="about-copy"><p>账目和账户已保存到你的个人账本。使用同一账号，在手机和电脑上接着记。</p><p>你可以导出账本留存；恢复数据库时需要使用数据库备份。</p><p>金额以分保存。转账、还款、报销及余额调整不计入日常收支。</p></div>
     <Button variant="outline" onClick={onImport}><Upload data-icon="inline-start" />账单导入</Button>
     <Button variant="outline" onClick={onManageCategories}><Tags data-icon="inline-start" />分类管理</Button>
+    <Button variant="outline" render={<Link href="/wiki" />} nativeButton={false}><BookOpen data-icon="inline-start" />项目 Wiki</Button>
     <Button variant="outline" onClick={download}><Download data-icon="inline-start" />导出账本记录</Button>
     <p className="signed-in-user">当前登录：{user?.name ?? "记账人"}{user?.email ? ` · ${user.email}` : ""}</p><p className="account-center-note">账号与登录方式在账号中心统一管理。其他用户看不到你的账本。</p><Button variant="ghost" onClick={logout}>退出登录</Button>
     {error && <p role="alert" className="delete-warning">{error}</p>}

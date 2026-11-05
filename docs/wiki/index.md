@@ -1,6 +1,7 @@
 ---
 id: project-wiki
 title: 项目 Wiki
+order: 0
 summary: 理解年年有鱼的记账规则、系统边界与运行维护。
 ---
 

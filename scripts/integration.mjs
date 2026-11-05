@@ -54,6 +54,30 @@ console.log('PASS signed OIDC code flow with state, nonce, PKCE; rejects forged/
 const bob=await login('bob'); const sameEmail=await login('same-email');
 cookie=alice; book=(await request('/api/book')).data;
 const aliceOwner=book.ownerId;assert.equal(book.accounts.length,0);
+// The production runner must contain the Markdown and authenticate before serving it.
+for (const path of ['/wiki', '/wiki/ledger']) {
+ const response=await fetch(base+path,{redirect:'manual'});
+ const html=await response.text();
+ assert.ok(response.headers.get('location')?.endsWith('/login') || (html.includes('NEXT_REDIRECT') && html.includes('/login')), 'anonymous Wiki request must redirect to login');
+ assert.ok(!html.includes('id="金额与分录"'), 'anonymous response must not include Wiki content');
+}
+for (const session of [alice,bob]) {
+ for (const path of ['/wiki', '/wiki/ledger', '/wiki/ledger']) {
+  const response=await fetch(base+path,{headers:{Cookie:session}});
+  assert.equal(response.status,200);
+  const html=await response.text();
+  assert.ok(!html.includes('NEXT_REDIRECT'), 'authenticated Wiki must not redirect');
+  assert.ok(html.includes('Wiki 主题'));
+  assert.ok(html.includes(path==='/wiki'?'理解年年有鱼':'id="金额与分录"'));
+  assert.ok(html.includes('<table>'));
+ }
+}
+const unknownWiki=await fetch(base+'/wiki/unknown-topic',{headers:{Cookie:alice}});
+const unknownWikiHtml=await unknownWiki.text();
+assert.ok(unknownWiki.status===404 || unknownWikiHtml.includes('NEXT_HTTP_ERROR_FALLBACK;404'));
+assert.ok(!unknownWikiHtml.includes('id="金额与分录"'));
+console.log('PASS Wiki auth, packaged Markdown, direct navigation, refresh, Chinese anchors, GFM tables and unknown pages');
+
 const bobBook=(await request('/api/book','GET',undefined,200,bob)).data;
 const thirdBook=(await request('/api/book','GET',undefined,200,sameEmail)).data;
 assert.notEqual(aliceOwner,bobBook.ownerId);assert.notEqual(aliceOwner,thirdBook.ownerId);

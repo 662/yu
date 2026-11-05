@@ -1,6 +1,7 @@
 ---
 id: bill-import
 title: 账单导入
+order: 5
 summary: 说明格式识别、账户映射、去重、批次重试与安全撤销。
 ---
 

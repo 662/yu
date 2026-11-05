@@ -1,6 +1,7 @@
 ---
 id: identity
 title: 身份与权限
+order: 3
 summary: 说明 OIDC 配置、登录流程、会话和账本隔离边界。
 ---
 

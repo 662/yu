@@ -1,6 +1,7 @@
 ---
 id: ledger
 title: 记账与分类规则
+order: 2
 summary: 解释金额、复式分录、余额、垫付报销及分类生命周期。
 ---
 

@@ -3,6 +3,8 @@ node_modules
 .git
 .env*
 !.env.example
+!.env.nas.example
+!.env.backup.example
 *.tsbuildinfo
 npm-debug.log*
 pnpm-debug.log*

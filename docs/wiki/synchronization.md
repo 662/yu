@@ -1,6 +1,7 @@
 ---
 id: synchronization
 title: 保存与同步
+order: 4
 summary: 解释账本版本锁、刷新竞态、账号切换和不确定保存的恢复。
 ---
 

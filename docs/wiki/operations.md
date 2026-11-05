@@ -1,6 +1,7 @@
 ---
 id: operations
 title: 运行与恢复
+order: 6
 summary: 记录容器部署、数据库迁移、健康检查、备份和恢复条件。
 ---
 

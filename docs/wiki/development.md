@@ -1,6 +1,7 @@
 ---
 id: development
 title: 开发与验证
+order: 7
 summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 ---
 
@@ -55,7 +56,13 @@ docker --context nas compose -p yu-test -f compose.yaml -f compose.test.yaml --e
 
 README 负责项目介绍、运行入口和导航，Wiki 保存当前业务与工程知识，助手规范保留在 AGENTS.md，历史过程留在 Git。修改导致已有事实失效时同步对应主题；新增长期机制优先补入原主题。局部样式与等价重构无需机械更新 Wiki。
 
-主题沿用 `docs/wiki/`，Markdown 用相对 `.md` 链接，页面 frontmatter 使用唯一 `id`、`title`、`summary`。增删主题时同步首页导航，检查来源路径、页面链接和锚点。没有引入网页路由或自动文档校验 CI；当前仓库阅读即完整入口。
+主题沿用 `docs/wiki/`，Markdown 用相对 `.md` 链接，页面 frontmatter 使用唯一 `id`、`title`、`summary`，`order` 控制导航顺序，可选 `related` 与 `aliases` 表达关联和旧地址。增删主题时同步首页导航。
+
+登录后访问 `/wiki`，或从“账本与设置”进入项目 Wiki；页面读取同一份 Markdown，支持主题导航、本页目录、表格和代码块。鉴权成功后才读取索引和正文，所有登录用户均可阅读同一份项目知识；登录流程保持原有返回账本行为，登录后可重新进入 Wiki 地址。
+
+`pnpm wiki:check` 使用 Markdown AST 检查标题、页面、中文及重复标题锚点、参考式链接、关联和别名冲突，拒绝路径越界、符号链接与危险协议。该检查作为 `pnpm build` 的前置步骤进入现有 CI。构建追踪与 Docker runner 均包含 `docs/wiki/`。
+
+Wiki 内相对链接转成 `/wiki` 地址；仓库外部引用仅按 `src/features/wiki/repository-files.json` 的明确白名单转换为 GitHub 源码链接，应用不提供源码文件下载。添加来源引用时更新白名单并运行校验，白名单仅记录已提交的公开文件。当前不支持嵌入图片或 Mermaid；Markdown 原始 HTML 不执行。
 
 ## 工具与验证依据
 
