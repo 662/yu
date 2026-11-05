@@ -8,7 +8,7 @@ summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 
 ## 本地开发
 
-安装、开发数据库启动、NAS 隧道和基础检查步骤统一见 [README](../../README.md)。开发数据库配置见 `compose.dev.yaml`，环境变量从 `.env.example` 复制；Keycloak 使用独立开发客户端，详见[身份与权限](identity.md)。
+安装、开发数据库启动、NAS 隧道和基础检查步骤统一见 [README](../../README.md)。开发数据库配置见 `compose.dev.yaml`，环境变量从 `.env.example` 复制；OIDC 身份服务使用独立开发客户端，详见[身份与权限](identity.md)。
 
 表结构变更先修改 schema，再运行 `pnpm db:generate`，审查生成 SQL 后执行 `pnpm db:migrate`；不要修改已经执行的迁移。升级前核对[迁移影响](operations.md)。
 
@@ -40,7 +40,7 @@ GitHub Actions 的 push / pull request 工作流包含质量检查、基准与�
 
 `compose.test.yaml` 是基于正式 Compose 的显式测试覆盖文件，使用独立 `yu-test` 项目和 `yu_test` 数据库，另含 RSA 签名的模拟 OIDC 服务；生产 runner 镜像不包含该服务。
 
-如需使用此方式，`.env.nas.test` 配置独立数据库账号密码、`APP_ORIGIN=http://localhost:3101`、`KEYCLOAK_ISSUER=http://mock-oidc:3102`、`KEYCLOAK_CLIENT_ID=yu-test` 和随机测试密钥，并提供用于 Compose 插值的 `APP_HOST=book.example.com`、`TRAEFIK_CERT_RESOLVER=test`（此环境禁用 Traefik 路由）。只能在独立环境使用，集成脚本按全新测试库执行一次。
+如需使用此方式，`.env.nas.test` 配置独立数据库账号密码、`APP_ORIGIN=http://localhost:3101`、`OIDC_ISSUER=http://mock-oidc:3102`、`OIDC_CLIENT_ID=yu-test` 和随机测试密钥，并提供用于 Compose 插值的 `APP_HOST=book.example.com`、`TRAEFIK_CERT_RESOLVER=test`（此环境禁用 Traefik 路由）。只能在独立环境使用，集成脚本按全新测试库执行一次。
 
 ```bash
 docker --context nas compose --env-file .env.nas build

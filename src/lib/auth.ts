@@ -16,7 +16,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const [user] = await getDb().select({ id: users.id, name: users.name, email: users.email, issuer: users.issuer, subject: users.subject })
     .from(sessions).innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, digest(token)), gt(sessions.expiresAt, new Date())));
-  if (!user || user.issuer !== process.env.KEYCLOAK_ISSUER) return null;
+  if (!user || user.issuer !== process.env.OIDC_ISSUER) return null;
   return user;
 }
 

@@ -40,9 +40,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with hostname db in .env}
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in .env.nas}
-      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
-      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     networks:
       - default
       - traefik_default

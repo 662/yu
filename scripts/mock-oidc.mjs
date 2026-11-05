@@ -1,10 +1,10 @@
 // Test-only OIDC issuer. Never run this fixture on a public network.
 import {createServer} from 'node:http';
 import {generateKeyPairSync, randomUUID, createHash, sign} from 'node:crypto';
-if (process.env.MOCK_OIDC_ENABLED !== 'true' || process.env.KEYCLOAK_ISSUER !== 'http://mock-oidc:3102') throw new Error('Test fixture requires isolated OIDC settings');
-const issuer=process.env.KEYCLOAK_ISSUER;
-const clientId=process.env.KEYCLOAK_CLIENT_ID;
-const secret=process.env.KEYCLOAK_CLIENT_SECRET;
+if (process.env.MOCK_OIDC_ENABLED !== 'true' || process.env.OIDC_ISSUER !== 'http://mock-oidc:3102') throw new Error('Test fixture requires isolated OIDC settings');
+const issuer=process.env.OIDC_ISSUER;
+const clientId=process.env.OIDC_CLIENT_ID;
+const secret=process.env.OIDC_CLIENT_SECRET;
 const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
 const jwk={...publicKey.export({format:'jwk'}),kid:'test-key',alg:'RS256',use:'sig'};
 const codes=new Map();
@@ -23,7 +23,7 @@ createServer(async(req,res)=>{
   if(url.pathname==='/jwks') return json(res,200,{keys:[jwk]});
   if(url.pathname==='/logout') {res.writeHead(302,{Location:url.searchParams.get('post_logout_redirect_uri')||'http://localhost:3101/login'});return res.end();}
   if(url.pathname==='/authorize') {
-   if(url.searchParams.get('client_id')!==clientId || url.searchParams.get('redirect_uri')!==process.env.APP_ORIGIN+'/api/auth/callback/keycloak') return json(res,400,{error:'invalid_request'});
+   if(url.searchParams.get('client_id')!==clientId || url.searchParams.get('redirect_uri')!==process.env.APP_ORIGIN+'/api/auth/callback/oidc') return json(res,400,{error:'invalid_request'});
    if(url.searchParams.get('code_challenge_method')!=='S256'||!url.searchParams.get('code_challenge'))return json(res,400,{error:'pkce_required'});
    const subject=url.searchParams.get('test_subject');
    if(!subject) {res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end('<!doctype html><html><body><h1>测试账号中心</h1><form method="get" action="/authorize">'+[...url.searchParams].map(([k,v])=>`<input type="hidden" name="${escape(k)}" value="${escape(v)}">`).join('')+'<button name="test_subject" value="alice">Alice</button><button name="test_subject" value="bob">Bob</button><button name="test_subject" value="same-email">相同邮箱的另一用户</button></form></body></html>');}

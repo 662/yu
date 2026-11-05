@@ -3,9 +3,9 @@ name: yu-ci
 x-test-environment: &test-environment
   DATABASE_URL: postgresql://yu_test:isolated_test_password@db:5432/yu_test
   APP_ORIGIN: http://app:3000
-  KEYCLOAK_ISSUER: http://mock-oidc:3102
-  KEYCLOAK_CLIENT_ID: yu-test
-  KEYCLOAK_CLIENT_SECRET: isolated_test_secret
+  OIDC_ISSUER: http://mock-oidc:3102
+  OIDC_CLIENT_ID: yu-test
+  OIDC_CLIENT_SECRET: isolated_test_secret
   OIDC_ALLOW_INSECURE_HTTP: "true"
   YU_TEST_BASE_URL: http://app:3000
 services:

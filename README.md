@@ -1,16 +1,16 @@
 # 年年有鱼
 
-手机与电脑都能使用的个人记账软件。通过 Keycloak 登录，每个用户拥有独立账本，记录保存在 PostgreSQL。
+手机与电脑都能使用的个人记账软件。通过 OIDC 账号中心登录，每个用户拥有独立账本，记录保存在 PostgreSQL。
 
 - Next.js 16.4.3、React 19、TypeScript、Tailwind CSS 4、shadcn/ui Base UI
 - Drizzle ORM、node-postgres、PostgreSQL 18
-- openid-client 6、Keycloak OIDC Authorization Code + PKCE
+- openid-client 6、OIDC Authorization Code + PKCE
 - Docker Compose、Traefik HTTPS、Node.js 24 LTS、pnpm 12.10.1
 
 ## 使用
 
-点击“通过账号中心登录”，在 Keycloak 登录后自动创建自己的空账本。先添加账户及当前余额，再开始记账。
-账号、密码以及 Google/GitHub 等第三方登录方式均由 Keycloak 统一管理，应用不再提供本地注册、初始化码或密码登录。
+点击“通过账号中心登录”，在账号中心登录后自动创建自己的空账本。先添加账户及当前余额，再开始记账。
+账号、密码以及 Google/GitHub 等第三方登录方式均由账号中心统一管理，应用不再提供本地注册、初始化码或密码登录。
 
 - 支出、收入、转账、信用卡还款，支持编辑与删除。
 - 月度收支、分类分布、搜索与账户筛选。
@@ -29,7 +29,7 @@
 
 - [架构与数据流](docs/wiki/architecture.md)：模块边界、用户账本、快照存储。
 - [记账与分类规则](docs/wiki/ledger.md)：分录、余额、资产负债、报销与分类生命周期。
-- [身份与权限](docs/wiki/identity.md)：Keycloak 配置、会话和用户隔离。
+- [身份与权限](docs/wiki/identity.md)：OIDC 配置、会话和用户隔离。
 - [保存与同步](docs/wiki/synchronization.md)：版本冲突、跨设备刷新和失败处理。
 - [账单导入](docs/wiki/bill-import.md)：支持格式、账户映射、去重和整批撤销。
 - [运行与恢复](docs/wiki/operations.md)：容器部署、迁移、备份与恢复演练。
@@ -45,7 +45,7 @@ cp .env.example .env
 pnpm db:up
 ```
 
-编辑 `.env` 的数据库连接、APP_ORIGIN 与开发专用 Keycloak 客户端信息。
+编辑 `.env` 的数据库连接、APP_ORIGIN 与开发专用 OIDC 客户端信息。
 数据库在本机启动时，可直接执行：
 
 ```bash
@@ -53,7 +53,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-使用远程 Docker 时，需要自行配置数据库隧道及 `DATABASE_URL`。生产构建不需要连接数据库或 Keycloak。
+使用远程 Docker 时，需要自行配置数据库隧道及 `DATABASE_URL`。生产构建不需要连接数据库或 OIDC 账号中心。
 
 ```bash
 pnpm lint

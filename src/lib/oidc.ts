@@ -13,16 +13,16 @@ const flowCookie = process.env.APP_ORIGIN?.startsWith("https://") ? "__Host-yu-o
 let configuration: Promise<oidc.Configuration> | undefined;
 
 export function oidcConfigured() {
-  return Boolean(process.env.KEYCLOAK_ISSUER && process.env.KEYCLOAK_CLIENT_ID && process.env.KEYCLOAK_CLIENT_SECRET && process.env.APP_ORIGIN);
+  return Boolean(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.APP_ORIGIN);
 }
 
 export function getOidcConfig() {
   if (!oidcConfigured()) throw new HttpError(503, "账号中心暂未连接，请稍后再试");
   if (!configuration) {
-    const issuer = new URL(process.env.KEYCLOAK_ISSUER!);
+    const issuer = new URL(process.env.OIDC_ISSUER!);
     const insecure = process.env.OIDC_ALLOW_INSECURE_HTTP === "true" && process.env.APP_ORIGIN?.startsWith("http://");
     if (issuer.protocol !== "https:" && !insecure) throw new HttpError(503, "账号中心需要 HTTPS 连接");
-    configuration = oidc.discovery(issuer, process.env.KEYCLOAK_CLIENT_ID!, { client_secret: process.env.KEYCLOAK_CLIENT_SECRET! }, oidc.ClientSecretBasic(process.env.KEYCLOAK_CLIENT_SECRET!), {
+    configuration = oidc.discovery(issuer, process.env.OIDC_CLIENT_ID!, { client_secret: process.env.OIDC_CLIENT_SECRET! }, oidc.ClientSecretBasic(process.env.OIDC_CLIENT_SECRET!), {
       timeout: 10,
       execute: [oidc.enableNonRepudiationChecks, ...(insecure ? [oidc.allowInsecureRequests] : [])],
     }).catch((error) => { configuration = undefined; throw error; });
@@ -31,7 +31,7 @@ export function getOidcConfig() {
 }
 
 export function callbackUrl() {
-  return new URL("/api/auth/callback/keycloak", process.env.APP_ORIGIN!).href;
+  return new URL("/api/auth/callback/oidc", process.env.APP_ORIGIN!).href;
 }
 
 export async function startOidcLogin() {

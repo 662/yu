@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {Client,Pool} from 'pg';
-if(!process.env.DATABASE_URL?.endsWith('/yu_test')||process.env.KEYCLOAK_ISSUER!=='http://mock-oidc:3102')throw new Error('Isolated test environment required');
+if(!process.env.DATABASE_URL?.endsWith('/yu_test')||process.env.OIDC_ISSUER!=='http://mock-oidc:3102')throw new Error('Isolated test environment required');
 const admin=new Pool({connectionString:process.env.DATABASE_URL});
 const name='yu_migration_'+randomUUID().replaceAll('-','');
 const url=new URL(process.env.DATABASE_URL);url.pathname='/'+name;
@@ -25,7 +25,11 @@ try {
   await client.query('insert into journal_entries (transaction_id,position,account_id,amount) values ($1,0,$2,$3),($1,1,$4,$5)',[id,account,kind==='expense'?-amount:amount,kind+':'+category,kind==='expense'?amount:-amount]);
   await client.query('COMMIT');
  }
- const snapshot=async()=>Promise.all(['accounts','transactions','journal_entries','books'].map(async table=>(await client.query(`select * from ${table} order by 1,2`)).rows));
+ const snapshot=async()=>{
+  const tables=[];
+  for(const table of ['accounts','transactions','journal_entries','books'])tables.push((await client.query(`select * from ${table} order by 1,2`)).rows);
+  return tables;
+ };
  const before=await snapshot();
  await client.query('BEGIN');await client.query(readFileSync('drizzle/0002_nebulous_stephen_strange.sql','utf8'));await client.query('COMMIT');
  assert.deepEqual(await snapshot(),before);

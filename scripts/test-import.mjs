@@ -1,7 +1,7 @@
 // Isolated OIDC + PostgreSQL integration suite. Never point this at a real book.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-if (!process.env.DATABASE_URL?.endsWith('/yu_test') || process.env.KEYCLOAK_ISSUER !== 'http://mock-oidc:3102') throw new Error('Isolated test environment required');
+if (!process.env.DATABASE_URL?.endsWith('/yu_test') || process.env.OIDC_ISSUER !== 'http://mock-oidc:3102') throw new Error('Isolated test environment required');
 const base=process.env.YU_TEST_BASE_URL || 'http://127.0.0.1:3000';
 const origin=process.env.APP_ORIGIN;
 let cookie='', book;
@@ -13,7 +13,7 @@ async function request(path,method='GET',body,expected=200,session=cookie,reques
 }
 const sessionCookie=(r)=>r.headers.getSetCookie().find(v=>v.startsWith('yu-session='))?.split(';')[0];
 async function beginLogin() {
- const start=await fetch(base+'/api/auth/signin/keycloak',{redirect:'manual'});
+ const start=await fetch(base+'/api/auth/signin/oidc',{redirect:'manual'});
  assert.equal(start.status,307);
  const flow=start.headers.getSetCookie().find(v=>v.startsWith('yu-oidc-flow=')).split(';')[0];
  return {authorization:new URL(start.headers.get('location')),flow};
