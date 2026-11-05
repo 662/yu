@@ -1,15 +1,19 @@
-name: Checks
+name: CI
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
   schedule:
     - cron: '0 20 * * 0'
 permissions:
   contents: read
 concurrency:
-  group: checks-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -32,3 +36,69 @@ jobs:
       - run: bash scripts/test-integration.sh
         env:
           YU_TEST_SCALE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
+  publish:
+    name: Publish ${{ matrix.target }}
+    needs: [quality, integration]
+    if: github.event_name == 'push' || (github.event_name == 'release' && !github.event.release.prerelease)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: runner
+            suffix: ''
+          - target: migrator
+            suffix: '-migrator'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release tag
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Formal releases require a vX.Y.Z tag.' >&2
+            exit 1
+          fi
+      - name: Image repository
+        id: image
+        run: echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        id: meta
+        with:
+          images: ${{ steps.image.outputs.repository }}${{ matrix.suffix }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=edge,enable=${{ github.event_name == 'push' }}
+            type=sha,format=long,enable=${{ github.event_name == 'push' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+      - name: Build and publish
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+      - name: Image digest
+        env:
+          IMAGE: ${{ steps.image.outputs.repository }}${{ matrix.suffix }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "\`$IMAGE@$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"

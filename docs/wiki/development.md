@@ -39,6 +39,25 @@ summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 
 `pnpm test:scale` 在同一隔离环境中追加 500 笔原子导入及超过 65535 笔的账本读写回归。大账本测试与 `pnpm bench` 在每周 GitHub Actions 和手动触发时执行；push / pull request 保留质量检查及核心集成。配置存在不等于本次已经执行或通过；交付时说明实际运行的检查。
 
+## CI 与镜像发布
+
+[CI 工作流](../../.github/workflows/ci.yml) 使用 GitHub 托管 runner，质量检查和隔离集成都成功后才允许推送镜像。日常任务完成后提交、推送，正式版本由维护者主动发布 Release；CI 不连接部署环境或自动部署。
+
+| 触发方式 | 检查与构建 | 镜像发布 |
+| --- | --- | --- |
+| 面向 main 的 PR | 质量检查、核心集成，构建应用和迁移镜像 | 不推送，包括来自 fork 的 PR |
+| push main | 质量检查、核心集成 | `edge`、`sha-<完整提交 SHA>` |
+| 发布正式 GitHub Release | 检查 Release tag 对应的代码并构建 | `X.Y.Z`、`X.Y`、`latest` |
+| 每周定时或手动运行 | 质量检查、核心集成、大账本与基准 | 不推送 |
+
+正式 Release 使用 `vX.Y.Z` tag；草稿、预发布和单独推送 tag 不发布正式镜像。已有 Release 不会因为工作流新增而补构建，后续发布正式 Release 时才会触发。main 的滚动测试镜像不修改正式版 `latest`。
+
+镜像地址为 `ghcr.io/662/yu`（应用）和 `ghcr.io/662/yu-migrator`（数据库迁移），提供 `linux/amd64`、`linux/arm64`。两个镜像来自同一个提交；跨镜像标签更新不具备原子性，定时获取端应等两个对应 SHA 标签都可用后再部署，或使用成功工作流摘要中的两个 digest，避免混用版本。
+
+镜像由工作流的 `GITHUB_TOKEN` 发布，仅发布 job 获得 `packages: write`；PR 不登录 GHCR、不获取镜像写入权限，不使用 `pull_request_target` 运行贡献者代码。第三方镜像 Actions 固定到提交 SHA。
+
+GHCR 新包默认私有，公开仓库不意味着包自动公开。首次成功推送后，维护者需在两个包的 Package settings 中分别将可见性设为 Public，才能匿名拉取。数据库连接、OIDC 密钥及其他部署配置只在部署端提供，不传入 CI 或镜像构建。各镜像 digest 记录在 Actions 摘要中，构建缓存用于后续发布加速。
+
 ## Wiki 维护
 
 README 负责项目介绍、运行入口和导航，Wiki 保存当前业务与工程知识，助手规范保留在 AGENTS.md，历史过程留在 Git。修改导致已有事实失效时同步对应主题；新增长期机制优先补入原主题。局部样式与等价重构无需机械更新 Wiki。
