@@ -1,7 +1,7 @@
 [
   ".env.backup.example",
   ".env.example",
-  ".env.nas.example",
+  ".env.production.example",
   ".github/workflows/ci.yml",
   "AGENTS.md",
   "Dockerfile",

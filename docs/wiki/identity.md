@@ -15,7 +15,7 @@ summary: 说明 OIDC 配置、登录流程、会话和账本隔离边界。
 
 ## OIDC 提供方配置
 
-脱敏模板见 [.env.nas.example](../../.env.nas.example) 与 [.env.example](../../.env.example)。以下均为占位示例：issuer `https://id.example.com`，client ID `yu`；部署时替换为身份服务提供的实际值。
+脱敏模板见 [.env.production.example](../../.env.production.example) 与 [.env.example](../../.env.example)。以下均为占位示例：issuer `https://id.example.com`，client ID `yu`；部署时替换为身份服务提供的实际值。
 
 应用使用通用 `openid-client`，没有提供方专属 SDK。身份服务需支持 OIDC discovery、授权码流程、S256 PKCE、签名 ID Token 和 `client_secret_basic` 客户端认证。应用不使用隐式流程或密码授权。
 

@@ -80,7 +80,7 @@ pnpm backup:verify .backups/yu-某次备份.dump
 
 ## 配置与脚本依据
 
-[部署 Compose](../../compose.yaml)、[镜像构建](../../Dockerfile)、[部署变量示例](../../.env.nas.example)、[备份变量示例](../../.env.backup.example)、[迁移入口](../../scripts/migrate.ts)、[迁移说明](../../drizzle/README.md)。
+[部署 Compose](../../compose.yaml)、[镜像构建](../../Dockerfile)、[部署变量示例](../../.env.production.example)、[备份变量示例](../../.env.backup.example)、[迁移入口](../../scripts/migrate.ts)、[迁移说明](../../drizzle/README.md)。
 
 [备份](../../scripts/backup.sh)、[恢复验证](../../scripts/verify-backup.sh)、[cron 安装](../../scripts/install-backup-cron.py)、[日志脱敏](../../src/lib/logging.ts)、[健康检查](../../src/app/api/ready/route.ts)。
 
