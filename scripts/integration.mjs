@@ -70,6 +70,23 @@ for (const session of [alice,bob]) {
   assert.ok(html.includes('Wiki 主题'));
   assert.ok(html.includes(path==='/wiki'?'理解年年有鱼':'id="金额与分录"'));
   assert.ok(html.includes('<table>'));
+  assert.ok(html.includes('class="site-header"'), 'shared layout must expose navigation');
+  const layoutClass=html.match(/data-wiki-layout="[^"]*" class="([^"]+)"/)?.[1];
+  assert.ok(layoutClass, 'Wiki CSS Module must export actual class names');
+  let snapshot=html;
+  let layoutStyled=false;
+  for (const tag of html.matchAll(/<link[^>]+rel="stylesheet"[^>]*>/g)) {
+   const href=tag[0].match(/href="([^"]+)"/)?.[1];
+   if (!href) continue;
+   const cssResponse=await fetch(new URL(href,base));
+   assert.equal(cssResponse.status,200);
+   const css=await cssResponse.text();
+   if (css.includes('.'+layoutClass)) layoutStyled=true;
+   snapshot=snapshot.replace(tag[0],'<style>'+css+'</style>');
+  }
+  assert.ok(layoutStyled, 'actual stylesheet must contain the exported Wiki layout selector');
+  if (session===alice && path==='/wiki/ledger') writeFileSync('/tmp/yu-wiki-browser.html',snapshot);
+
  }
 }
 const unknownWiki=await fetch(base+'/wiki/unknown-topic',{headers:{Cookie:alice}});

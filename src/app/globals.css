@@ -754,3 +754,12 @@ h1 { font-size: 28px; letter-spacing: 1px; font-weight: 600; line-height: 1.6; }
 @media (max-width: 767px) {
   .page-heading[data-page="categories"] > [data-slot="button"] { display: inline-flex; }
 }
+
+/* Shared layout navigation uses the same paper and forest palette as the book. */
+.site-header { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
+.site-header[data-workspace] { margin-left: 224px; }
+.site-brand { display: flex; align-items: center; gap: 8px; color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none; }
+.site-brand svg { width: 22px; height: 22px; }
+.site-header nav { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 1023px) { .site-header[data-workspace] { margin-left: 190px; } }
+@media (max-width: 767px) { .site-header, .site-header[data-workspace] { margin-left: 0; padding-inline: 16px; } }

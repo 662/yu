@@ -4,8 +4,9 @@ import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { resolveLink, type WikiIndex, type WikiDocument } from "./wiki-core";
 
-export function WikiMarkdown({ index, document, tableClassName }: { index: WikiIndex; document: WikiDocument; tableClassName?: string }) {
+export function WikiMarkdown({ index, document, tableClassName, omitTitle = false }: { index: WikiIndex; document: WikiDocument; tableClassName?: string; omitTitle?: boolean }) {
   return <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={{
+    ...(omitTitle ? { h1: () => null } : {}),
     a: ({ href = "", children }) => {
       const target = resolveLink(index, href, document.sourcePath);
       return /^https?:|^mailto:/i.test(target)

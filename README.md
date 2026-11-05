@@ -25,7 +25,7 @@
 
 ## 项目知识
 
-[项目 Wiki](docs/wiki/index.md) 是业务规则和工程知识入口。应用内登录后访问 `/wiki`，或从“账本与设置 → 项目 Wiki”在线阅读同一份 Markdown：
+[项目 Wiki](docs/wiki/index.md) 是业务规则和工程知识入口。应用内登录后访问 `/wiki`，或点击全站顶部“项目 Wiki”（也可从“账本与设置”进入）在线阅读同一份 Markdown：
 
 - [架构与数据流](docs/wiki/architecture.md)：模块边界、用户账本、快照存储。
 - [记账与分类规则](docs/wiki/ledger.md)：分录、余额、资产负债、报销与分类生命周期。
