@@ -45,6 +45,10 @@ next-env.d.ts
 
 /.owner-setup.txt
 /.backups/
+/postgres/
+/backups/
+/state/
+/images.env
 
 # Python operations tooling
 __pycache__/

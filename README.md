@@ -64,4 +64,4 @@ pnpm build
 
 表结构修改后执行 `pnpm db:generate`，审查 SQL 后执行 `pnpm db:migrate`，不要修改已经执行过的迁移。
 
-部署与备份命令见[运行与恢复](docs/wiki/operations.md)，完整检查和隔离集成说明见[开发与验证](docs/wiki/development.md)。真实环境文件、密钥、会话和 `.backups/` 不纳入 Git。
+部署端使用 CI 发布的镜像和本地数据目录，可定时获取成功 main CI 对应的版本；日常开发只提交推送，不从开发机直接部署。部署与备份说明见[运行与恢复](docs/wiki/operations.md)，完整检查和隔离集成说明见[开发与验证](docs/wiki/development.md)。真实环境文件、密钥、会话和 `.backups/` 不纳入 Git。

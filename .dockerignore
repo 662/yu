@@ -11,6 +11,10 @@ pnpm-debug.log*
 
 .owner-setup.txt
 .backups
+postgres
+backups
+state
+images.env
 
 __pycache__
 *.pyc

@@ -7,33 +7,42 @@ summary: 记录容器部署、数据库迁移、健康检查、备份和恢复�
 
 # 运行与恢复
 
-本页命令描述仓库现有部署约定；执行前确认目标 context 与环境文件。
+部署命令在部署主机执行。日常开发通过 GitHub CI 构建并发布镜像，部署端定时拉取；开发机不再直接构建或部署私有服务器。
 
-## 容器部署与备份
+## 容器部署与自动更新
 
-部署 Compose 连接外部 `traefik_default` 网络，需事先创建网络并配置 Traefik。通过 `APP_HOST` 设置自己的域名，通过 `TRAEFIK_CERT_RESOLVER` 指定已配置的证书解析器；外部 HTTPS 端口由部署环境决定，应用内部使用 3000。
-数据库使用命名卷 `yu_postgres_data`，PostgreSQL 18 挂载到 `/var/lib/postgresql`；数据库和迁移服务禁用 Traefik 路由。
-项目通过构建上下文打包进镜像，不挂载本机源码。以下 `nas` 为远程 Docker context 的示例名称，请替换为自己的 context。
+部署 Compose 使用 `ghcr.io/662/yu` 和 `ghcr.io/662/yu-migrator` 镜像，不再包含源码构建步骤。镜像的触发规则、地址与标签见[开发与验证](development.md#ci-与镜像发布)。
 
-`.env.nas` 同时包含 POSTGRES_DB/USER/PASSWORD、DATABASE_URL 及[身份与权限](identity.md)中的 OIDC 设置。
-DATABASE_URL 的主机为 `db`；更新时保留已有数据库密码，不要用示例覆盖。
+首次部署时，在独立目录放置 `compose.yaml`，从 `.env.production.example` 复制 `.env`，配置自己的数据库、OIDC 与域名。`DATABASE_URL` 的主机为 `db`；更新已有环境时保留数据库密码。部署 Compose 连接外部 `traefik_default` 网络，需事先创建并配置 Traefik。`APP_HOST` 指定域名，`TRAEFIK_CERT_RESOLVER` 指定已配置的证书解析器，应用内部端口为 3000。
+
+数据库使用本地目录 bind mount，默认 `./postgres`，可用 `YU_POSTGRES_DIR` 指定路径。PostgreSQL 18 挂载父目录为 `/var/lib/postgresql`，实际集群位于其下的 `18/docker/`；目录必须事先存在，Compose 不自动创建。应用不挂载源码。`YU_POSTGRES_IMAGE` 可固定数据库镜像，应用更新不应顺带升级 PostgreSQL。
+
+以下仅用于**全新数据库**的首次启动，命令在部署目录执行：
 
 ```bash
-bash scripts/backup.sh
-docker --context nas compose --env-file .env.nas up -d --build --wait --wait-timeout 180
-docker --context nas compose --env-file .env.nas ps -a
+mkdir -p postgres
+docker compose --env-file .env pull
+docker compose --env-file .env up -d --wait --wait-timeout 180
+docker compose --env-file .env ps -a
 curl -f https://book.example.com/api/ready
 ```
 
-启动顺序：数据库健康 → SQL 迁移成功 → 应用启动。`down` 保留数据，`down -v` 删除数据库。
-备份为 `.backups/` 下的完整 pg_dump 文件，目录与文件仅当前用户可读；支持每日自动备份、保留策略和每周隔离恢复验证，配置见本页定期备份部分。
-JSON 导出包含当前用户账本及导入记录，不等同于数据库备份。
+已有命名卷部署不能直接套用空目录。先备份并验证，再停止应用写入和数据库，将整个数据卷根目录冷复制到本地目录，保留原有权限与 UID/GID，核对数据后再切换挂载。首次切换期间保留旧卷及备份，确认新部署正常后再单独处理；不要在数据库运行时复制数据库文件。
 
-CI 发布镜像的触发规则、地址与标签见[开发与验证](development.md#ci-与镜像发布)。项目工作流只构建和发布镜像，部署端自行选择版本与更新方式；使用发布镜像时确保应用和迁移镜像属于同一次构建。现有 Compose 命令仍支持从源码构建部署。
+日常自动更新由部署端的定时任务完成，例如 systemd service + timer：
+
+1. 查询 main 最近一次成功的 CI，以其完整提交 SHA 选择两个镜像，不分别追踪可变的 `edge` 标签。
+2. 拉取两个 SHA 镜像，核对镜像 revision，并固定各自 digest；版本未变化时跳过。
+3. 停止应用写入，完成备份及隔离恢复验证，执行迁移，再启动新应用。
+4. 检查进程、数据库就绪、登录入口及外部访问，成功后记录版本。
+
+更新任务应互斥，网络或拉取失败时保留当前服务。开始迁移前的失败可恢复原应用；迁移开始后若结果不明或新应用验证失败，应保留数据库、备份及失败状态，停止自动重试，待人工核对，不自动反向迁移或覆盖恢复数据库。
+
+实际服务器的定时器、更新脚本、版本状态和凭据只保留在部署端，不提交到公开仓库。服务与迁移日志分别由部署端保留。`docker compose down` 保留本地数据库目录；JSON 导出仅包含当前用户账本及导入记录，不等同于数据库备份。
 
 ## 定期备份与恢复演练
 
-调度主机需要 Bash、Python 3、`flock`、Docker CLI，以及连接 NAS context 的权限。调度主机应持续开机，备份目录应位于与 NAS 数据盘不同的机器或磁盘。
+部署端的更新前备份用于保留升级时点；另保留异机备份。仓库中的备份工具可在独立备份主机运行，需要 Bash、Python 3、`flock`、Docker CLI 及连接目标 Docker context 的权限。备份主机应持续开机，备份目录应位于与数据库不同的机器或磁盘。Docker context 在此仅用于备份与恢复验证，不用于日常部署。
 
 ```bash
 cp .env.backup.example .env.backup
@@ -57,7 +66,7 @@ pnpm backup:verify .backups/yu-某次备份.dump
 
 ## 升级与迁移
 
-启动依赖为数据库健康、迁移服务成功、应用启动。迁移由 `scripts/migrate.ts` 读取 Drizzle journal 执行，不要修改已执行迁移。先备份，再审查 SQL，最后升级。
+启动顺序为数据库健康、迁移成功、应用启动。迁移由 `scripts/migrate.ts` 读取 Drizzle journal 执行，不要修改已执行迁移。先备份，再审查 SQL，最后升级。
 
 0.1 以 `0000_baseline.sql` 为唯一基线，直接建立最终表结构及复式分录平衡函数、延迟约束触发器，不执行开发期的数据清空与历史回填。
 
