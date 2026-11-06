@@ -28,7 +28,7 @@ async function authorize(start,subject) {
 async function callback(path,flow) {return fetch(base+path,{headers:flow?{Cookie:flow}:{},redirect:'manual'});}
 async function login(subject) {
  const start=await beginLogin();const path=await authorize(start,subject);const r=await callback(path,start.flow);
- assert.equal(r.status,307);assert.equal(new URL(r.headers.get('location')).pathname,'/');
+ assert.equal(r.status,307);assert.equal(new URL(r.headers.get('location')).pathname,'/ledger');
  const result=sessionCookie(r);assert.ok(result);assert.match(r.headers.get('set-cookie'),/HttpOnly/i);assert.match(r.headers.get('set-cookie'),/SameSite=lax/i);
  return result;
 }
