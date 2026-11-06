@@ -448,9 +448,9 @@ h1 { font-size: 28px; letter-spacing: 1px; font-weight: 600; line-height: 1.6; }
   .page-footer { margin-top: 28px; padding-top: 23px; font-size: 12px; }
   .footer-private { display: none; }
   .mobile-nav { position: fixed; bottom: 0; inset-inline: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-around; padding: 10px 25px calc(10px + env(safe-area-inset-bottom)); z-index: 20; box-shadow: 0 -3px 15px color-mix(in srgb, var(--foreground) 2%, transparent); }
-  .mobile-nav > button:not([data-slot="button"]) { width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground); font-size: 12px; }
-  .mobile-nav > button:not([data-slot="button"]) svg { width: 20px; height: 20px; stroke-width: 1.6; }
-  .mobile-nav > button.active { color: var(--primary); }
+  .mobile-nav > :is(a, button):not([data-slot="button"]) { width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground); font-size: 12px; }
+  .mobile-nav > :is(a, button):not([data-slot="button"]) svg { width: 20px; height: 20px; stroke-width: 1.6; }
+  .mobile-nav > .active { color: var(--primary); }
   .mobile-nav > [data-slot="button"] { min-width: 120px; border-radius: 13px; }
   .net-worth-hero { padding: 26px; margin-top: 5px; margin-bottom: 30px; gap: 23px; }
   .net-worth-hero .money { font-size: 37px; }
@@ -748,7 +748,7 @@ h1 { font-size: 28px; letter-spacing: 1px; font-weight: 600; line-height: 1.6; }
   .category-order { flex-direction: row; gap: 4px; margin-right: auto; }
   .category-row-actions > [data-slot="button"] { min-width: 44px; font-size: 13px; }
   .mobile-nav { gap: 8px; padding-inline: 12px; }
-  .mobile-nav > button:not([data-slot="button"]) { min-height: 44px; width: 48px; font-size: 12px; }
+  .mobile-nav > :is(a, button):not([data-slot="button"]) { min-height: 44px; width: 48px; font-size: 12px; }
   .mobile-nav > [data-slot="button"] { min-width: 104px; }
   [data-slot="toast-viewport"] { bottom: calc(88px + env(safe-area-inset-bottom)); }
   .import-progress { bottom: calc(88px + env(safe-area-inset-bottom)); }

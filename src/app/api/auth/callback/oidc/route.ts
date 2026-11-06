@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   await connection();
   try {
     await finishOidcLogin(request);
-    return NextResponse.redirect(new URL("/", process.env.APP_ORIGIN!), { headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+    return NextResponse.redirect(new URL("/ledger", process.env.APP_ORIGIN!), { headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
   } catch (error) {
     const context = requestContext(request, "oidc.callback_failed");
     logServerError(error, context);

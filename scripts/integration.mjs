@@ -30,7 +30,7 @@ async function authorize(start,subject) {
 async function callback(path,flow) {return fetch(base+path,{headers:flow?{Cookie:flow}:{},redirect:'manual'});}
 async function login(subject) {
  const start=await beginLogin();const path=await authorize(start,subject);const r=await callback(path,start.flow);
- assert.equal(r.status,307);assert.equal(new URL(r.headers.get('location')).pathname,'/');
+ assert.equal(r.status,307);assert.equal(new URL(r.headers.get('location')).pathname,'/ledger');
  const result=sessionCookie(r);assert.ok(result);assert.match(r.headers.get('set-cookie'),/HttpOnly/i);assert.match(r.headers.get('set-cookie'),/SameSite=lax/i);
  return result;
 }
@@ -61,6 +61,20 @@ for (const path of ['/wiki', '/wiki/ledger']) {
  assert.ok(response.headers.get('location')?.endsWith('/login') || (html.includes('NEXT_REDIRECT') && html.includes('/login')), 'anonymous Wiki request must redirect to login');
  assert.ok(!html.includes('id="金额与分录"'), 'anonymous response must not include Wiki content');
 }
+// Every business path authenticates independently, including direct deep links.
+for (const path of ['/ledger', '/accounts', '/imports', '/categories?kind=income']) {
+ const anonymous=await fetch(base+path,{redirect:'manual'});
+ const anonymousHtml=await anonymous.text();
+ assert.ok(anonymous.headers.get('location')?.endsWith('/login') || (anonymousHtml.includes('NEXT_REDIRECT') && anonymousHtml.includes('/login')), 'business route must redirect anonymous requests');
+ const authenticated=await fetch(base+path,{headers:{Cookie:alice}});
+ assert.equal(authenticated.status,200);
+ const html=await authenticated.text();
+ assert.ok(html.includes('class="book-app"'), 'direct business route must mount the shared workspace');
+ assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK'), 'business route must resolve');
+}
+const root=await fetch(base+'/',{redirect:'manual'});
+assert.equal(new URL(root.headers.get('location'),base).pathname,'/ledger');
+console.log('PASS business paths, direct access, shared layout and authentication');
 const wiki=await fetch(base+'/wiki/ledger',{headers:{Cookie:alice}});
 assert.equal(wiki.status,200);
 assert.ok((await wiki.text()).includes('id="金额与分录"'), 'runner must package and serve authenticated Markdown');

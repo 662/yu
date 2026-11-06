@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { oidcConfigured } from "@/lib/oidc";
 
 async function Login({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  if (await getCurrentUser()) redirect("/");
+  if (await getCurrentUser()) redirect("/ledger");
   const { error } = await searchParams;
   return <AuthScreen configured={oidcConfigured()} error={error} />;
 }

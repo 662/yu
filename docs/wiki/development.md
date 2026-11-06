@@ -19,6 +19,7 @@ summary: 按变更选择实现入口、数据库迁移和隔离验证方式。
 
 | 修改内容 | 先读主题 | 主要验证入口 |
 | --- | --- | --- |
+| 页面、导航、URL 筛选 | [架构与数据流](architecture.md) | routes 单元测试、路由鉴权集成、生产构建 |
 | 余额、报销、交易、分类 | [记账规则](ledger.md) | ledger、commands、categories、summary 单元测试 |
 | 客户端保存、刷新、账号切换 | [保存与同步](synchronization.md) | book-store 单元测试；涉及 API 时加集成验证 |
 | 登录、隔离、来源校验 | [身份与权限](identity.md) | OIDC/PostgreSQL 集成测试 |

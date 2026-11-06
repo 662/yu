@@ -21,10 +21,9 @@ import { categoryIcons, CategoryIcon } from "./icons";
 const iconLabels = ["餐饮", "购物", "交通", "居住", "休闲", "健康", "日用", "其他", "工作", "礼物", "增长", "学习", "宠物", "旅行"];
 const toneLabels = ["暖橙", "粉红", "浅蓝", "青绿", "浅紫", "橄榄", "灰色"];
 
-export function CategoryManager({ book, initialKind, saving, onCommand }: {
-  book: Book; initialKind: CategoryKind; saving: boolean; onCommand: (command: Command) => Promise<void>;
+export function CategoryManager({ book, kind, onKindChange, saving, onCommand }: {
+  book: Book; kind: CategoryKind; onKindChange: (kind: CategoryKind) => void; saving: boolean; onCommand: (command: Command) => Promise<void>;
 }) {
-  const [kind, setKind] = useState<CategoryKind>(initialKind);
   const [editor, setEditor] = useState<{ category?: Category } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState("");
@@ -49,7 +48,7 @@ export function CategoryManager({ book, initialKind, saving, onCommand }: {
   return <section className="categories-page" aria-label="分类管理">
     {editor && <header className="category-editor-heading"><h2>{editor.category ? "编辑分类" : "添加分类"}</h2><p>取个顺手的名字，再选一个喜欢的图标。</p></header>}
     {editor ? <CategoryEditor key={editor.category?.id ?? `new-${kind}`} book={book} kind={kind} category={editor.category} saving={saving} onBack={() => { setEditor(null); setError(""); }} onCommand={async (command) => { await onCommand(command); setEditor(null); toast.add({ title: command.type === "category.delete" ? "分类已删除" : "分类已保存", type: "success" }); }} /> : <>
-      <div className="category-manager-toolbar"><ToggleGroup aria-label="管理分类类型" value={[kind]} onValueChange={(v) => { if (v[0]) { setKind(v[0] as CategoryKind); setError(""); } }}><ToggleGroupItem value="expense">支出分类</ToggleGroupItem><ToggleGroupItem value="income">收入分类</ToggleGroupItem></ToggleGroup><Button onClick={() => setEditor({})} disabled={saving}><Plus data-icon="inline-start" />添加分类</Button></div>
+      <div className="category-manager-toolbar"><ToggleGroup aria-label="管理分类类型" value={[kind]} onValueChange={(v) => { if (v[0]) { onKindChange(v[0] as CategoryKind); setError(""); } }}><ToggleGroupItem value="expense">支出分类</ToggleGroupItem><ToggleGroupItem value="income">收入分类</ToggleGroupItem></ToggleGroup><Button onClick={() => setEditor({})} disabled={saving}><Plus data-icon="inline-start" />添加分类</Button></div>
       <div className="category-list-heading"><h3>正在使用 <span>{active.length}</span></h3><span>顺序会同步到记账选项</span></div>
       <div className="managed-categories">{active.map((c, index) => <CategoryRow key={c.id} category={c} book={book} saving={saving} onEdit={() => { setError(""); setEditor({ category: c }); }} onArchive={() => void run({ type: "category.archive", id: c.id, archived: true }, "分类已停用，历史账目保持原来的归类")} onUp={index > 0 ? () => move(c, -1) : undefined} onDown={index < active.length - 1 ? () => move(c, 1) : undefined} />)}</div>
       {!active.length && <Empty><EmptyHeader><EmptyMedia variant="icon"><Tags /></EmptyMedia><EmptyTitle>还没有启用的分类</EmptyTitle><EmptyDescription>添加一个分类，或恢复之前停用的分类。</EmptyDescription></EmptyHeader></Empty>}
