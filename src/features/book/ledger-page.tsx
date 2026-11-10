@@ -9,7 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, Leaf, RotateCcw, Search, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, RotateCcw, Search, SlidersHorizontal, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { bookCategories, categoryName } from "./categories";
@@ -61,8 +61,8 @@ export function LedgerPage() {
           <div className="month-toolbar"><div className="month-switch"><Button variant="ghost" size="icon" aria-label="上个月" onClick={() => changeMonth(-1)}><ChevronLeft /></Button><label className="month-label"><span>{month.slice(0, 4)} 年 <strong>{Number(month.slice(5))} 月</strong></span><input type="month" aria-label="选择月份" value={month} onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) { selectMonth(e.target.value); } }} /></label><Button variant="ghost" size="icon" aria-label="下个月" onClick={() => changeMonth(1)}><ChevronRight /></Button></div><Button variant="outline" size="sm" onClick={() => { updateFilters({ month: today.slice(0, 7), scope: "month", filter: "all" }); }}>回到本月</Button><span className="month-count">{month.replace("-", " 年 ")} 月，共记录 {monthly.length} 笔</span></div>
 
           <section className="summary-grid" aria-label="本月收支概览">
-            <div className="summary-item expense-summary"><div className="summary-label"><span>本月支出</span><span className="summary-symbol"><ArrowUpRight /></span></div><Amount value={expense} currency /><div className="summary-foot"><span>认真生活的每一笔</span><MiniBars transactions={monthly} month={month} /></div></div>
-            <div className="summary-item"><div className="summary-label"><span>本月收入</span><span className="summary-symbol income-symbol"><ArrowDownLeft /></span></div><Amount value={income} currency /><div className="summary-foot">{monthly.filter((t) => t.kind === "income").length} 笔收入，都是生活的底气</div></div>
+            <div className="summary-item expense-summary"><div className="summary-label"><span>本月支出</span><span className="summary-symbol"><ArrowUpRight /></span></div><Amount value={expense} currency /><div className="summary-foot"><span>每日支出趋势</span><MiniBars transactions={monthly} month={month} /></div></div>
+            <div className="summary-item"><div className="summary-label"><span>本月收入</span><span className="summary-symbol income-symbol"><ArrowDownLeft /></span></div><Amount value={income} currency /><div className="summary-foot">{monthly.filter((t) => t.kind === "income").length} 笔收入</div></div>
             <div className="summary-item"><div className="summary-label"><span>本月结余</span><span className="summary-symbol"><Wallet /></span></div><Amount value={income - expense} currency /><div className="summary-foot">收入 − 支出，不含转账与垫付</div></div>
           </section>
 
@@ -79,14 +79,12 @@ export function LedgerPage() {
                   </button>)}</section>;
                 }) : <Empty className="empty-ledger"><EmptyHeader><EmptyMedia variant="icon"><BookOpen /></EmptyMedia><EmptyTitle>{query || filter !== "all" || accountFilter || categoryFilter ? "没有找到这类账目" : allTime ? "还没有账目" : "这个月还是一张白纸"}</EmptyTitle><EmptyDescription>{query || filter !== "all" || accountFilter || categoryFilter ? "换个关键词，或清除筛选再看看。" : "从今天的一顿饭、一杯咖啡开始吧。"}</EmptyDescription></EmptyHeader><EmptyContent><Button variant="outline" onClick={() => { if (query || filter !== "all" || accountFilter || categoryFilter) { clearFilters(); } else startEntry(); }}>{query || filter !== "all" || accountFilter || categoryFilter ? "清除筛选" : "记下第一笔"}</Button></EmptyContent></Empty>}
               </div>
-              {groups.length > 0 && <div className="list-end"><span />这些小事，都是生活。<span /></div>}
             </section>
 
             <aside className="insights-sidebar">
               <SpendingCard book={book} transactions={monthly} total={expense} onCategory={(id) => { updateFilters({ filter: "expense", category: id, scope: "month", query: "" }); }} />
-              <Card className="asset-glance"><CardHeader><CardTitle>我的小金库</CardTitle><CardDescription>净资产 · 含投资估值与待报销</CardDescription><CardAction><Wallet className="size-4" /></CardAction></CardHeader><CardContent><div className="glance-number"><Amount value={summary.net} currency /></div><div className="glance-breakdown"><span>总资产<strong>¥{money(summary.assets)}</strong></span><span>总负债<strong>¥{money(summary.debts)}</strong></span></div><Separator /><Link data-slot="button" href="/accounts" className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-between")}>看看钱在哪里<ArrowRight data-icon="inline-end" /></Link></CardContent></Card>
+              <Card className="asset-glance"><CardHeader><CardTitle>净资产</CardTitle><CardDescription>含投资估值与待报销</CardDescription><CardAction><Wallet className="size-4" /></CardAction></CardHeader><CardContent><div className="glance-number"><Amount value={summary.net} currency /></div><div className="glance-breakdown"><span>总资产<strong>¥{money(summary.assets)}</strong></span><span>总负债<strong>¥{money(summary.debts)}</strong></span></div><Separator /><Link data-slot="button" href="/accounts" className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-between")}>查看账户<ArrowRight data-icon="inline-end" /></Link></CardContent></Card>
               {pending.length > 0 && <Card className="pending-card"><CardHeader><CardTitle>还有钱要收回来</CardTitle><CardDescription>{pending.length} 笔待报销，共 ¥{money(summary.receivable)}</CardDescription><CardAction><RotateCcw className="size-4" /></CardAction></CardHeader><CardContent><div className="pending-list">{pending.map((t) => <button key={t.id} onClick={() => setModal({ type: "reimburse", id: t.id })}><span>{t.note || "垫付款"}</span><strong>¥{money(summary.remaining.get(t.id) ?? 0)}</strong><ChevronRight /></button>)}</div></CardContent></Card>}
-              <p className="aside-note"><Leaf />不必每一笔都完美，<br />开始记录就很好。</p>
             </aside>
           </div>
   </>;
@@ -124,7 +122,7 @@ function SpendingCard({ book, transactions, total, onCategory }: { book: Book; t
     cursor += c.amount / total * 100;
     return `var(--tone-${c.tone}) ${start}% ${cursor}%`;
   }).join(", ");
-  return <Card className="spending-card"><CardHeader><CardTitle>钱花在哪里</CardTitle><CardDescription>本月个人支出分布</CardDescription><CardAction><span className="tiny-dot" /></CardAction></CardHeader><CardContent>
+  return <Card className="spending-card"><CardHeader><CardTitle>支出分布</CardTitle><CardDescription>按分类查看所选月份的个人支出</CardDescription><CardAction><span className="tiny-dot" /></CardAction></CardHeader><CardContent>
     <div className="spending-chart" role="img" aria-label={groups.length ? groups.map((c) => `${c.name} ${money(c.amount)}元`).join("，") : "本月暂无支出"}><div className="donut" style={{ background: groups.length ? `conic-gradient(${gradient})` : "var(--muted)" }}><div><span>{groups.length ? "本月支出" : "慢慢开始"}</span><strong>{groups.length}<small> 个分类</small></strong></div></div></div>
     <div className="category-breakdown">{groups.map((c) => <button key={c.id} onClick={() => onCategory(c.id)}><span className={cn("legend-dot", `tone-${c.tone}`)} /><span>{c.name}</span><strong>¥{money(c.amount)}</strong><small>{Math.round(c.amount / total * 100)}%</small></button>)}</div>
     {!groups.length && <p className="chart-empty">记下一笔消费，看看生活的模样。</p>}

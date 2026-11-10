@@ -8,7 +8,8 @@ import { buttonVariants } from "@/components/ui/button";
 export function SiteHeader() {
   const pathname = usePathname();
   const wiki = pathname === "/wiki" || pathname.startsWith("/wiki/");
-  return <header className="site-header" data-workspace={["/ledger", "/accounts", "/imports", "/categories"].includes(pathname) || undefined}>
+  if (["/ledger", "/accounts", "/imports", "/categories"].includes(pathname)) return null;
+  return <header className="site-header">
     <Link href="/ledger" className="site-brand"><Fish aria-hidden="true" /><span>年年有鱼</span></Link>
     <nav aria-label="站点导航">
       <Link data-slot="button" className={buttonVariants({ variant: "ghost", size: "sm" })} href="/ledger">我的账本</Link>

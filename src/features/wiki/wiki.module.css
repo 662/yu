@@ -6,11 +6,11 @@
 .sidebarHeading p { font-size: 10px; color: var(--muted-foreground); margin-top: 5px; }
 .mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--primary); color: var(--primary-foreground); transform: rotate(-5deg); flex-shrink: 0; }
 .mark svg { width: 20px; height: 20px; }
-.caption { font-size: 10px; letter-spacing: 1.5px; color: var(--muted-foreground); padding: 12px; }
+.caption { font-size: 12px; letter-spacing: 1.5px; color: var(--muted-foreground); padding: 12px; }
 .navigation { display: flex; flex-direction: column; gap: 6px; }
-.navigation a { display: flex; align-items: center; gap: 12px; padding: 13px 14px; color: var(--sidebar-foreground); border-radius: 10px; font-size: 13px; text-decoration: none; transition: background 150ms; }
+.navigation a { display: flex; align-items: center; gap: 12px; padding: 13px 14px; color: var(--sidebar-foreground); border-radius: 10px; font-size: 14px; text-decoration: none; transition: background 150ms; }
 .navigation a:hover { background: var(--muted); }
-.navigation a[aria-current="page"] { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); font-weight: 600; }
+.navigation a[aria-current="page"] { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); font-weight: 600; box-shadow: inset 3px 0 var(--primary); }
 .pageNumber { font-size: 10px; opacity: .55; font-variant-numeric: tabular-nums; }
 .sidebarNote { display: flex; align-items: center; gap: 8px; margin: 36px 12px; color: var(--muted-foreground); font-size: 11px; line-height: 1.8; }
 .sidebarNote svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--primary); }
@@ -18,7 +18,7 @@
 .contentCard { --card-spacing: 32px; }
 .eyebrow { font-size: 10px; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 10px; }
 .title { font-size: clamp(25px, 3vw, 34px); font-weight: 650; line-height: 1.5; margin-bottom: 8px; letter-spacing: 1px; }
-.article { font-size: 14px; line-height: 1.95; overflow-wrap: anywhere; }
+.article { font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
 .article :is(h1,h2,h3,h4,h5,h6), .title { scroll-margin-top: 24px; }
 .article h2 { font-size: 21px; font-weight: 600; margin: 32px 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .article h2:first-child { margin-top: 4px; }
@@ -56,11 +56,10 @@
   .sidebar { position: static; margin-bottom: 20px; }
   .sidebarHeading { padding: 4px 4px 16px; }
   .sidebar .caption, .sidebarNote { display: none; }
-  .navigation { flex-direction: row; overflow-x: auto; padding-bottom: 8px; gap: 6px; }
-  .navigation a { flex-shrink: 0; padding: 9px 12px; background: var(--card); border: 1px solid var(--border); }
+  .navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .navigation a { min-height: 44px; padding: 9px 12px; background: var(--card); border: 1px solid var(--border); }
   .pageNumber { display: none; }
   .contentCard { --card-spacing: 20px; }
-  .article { font-size: 14px; }
   .article h2 { font-size: 19px; }
   .table th, .table td { padding: 10px; }
 }

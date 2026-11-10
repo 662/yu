@@ -2,10 +2,10 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { BookOpen, ChevronLeft, ChevronRight, CircleHelp, Fish, Leaf, Plus, Settings, Sparkles, Sprout, Tags, Upload, Wallet, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Fish, Plus, Settings, Sparkles, Sprout, Tags, Upload, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
@@ -19,7 +19,20 @@ import { ledgerHref, readLedgerLocation } from "./routes";
 import { WorkspaceContext, type Modal } from "./book-context";
 import { AboutDialog, TransactionDetail } from "./book-dialogs";
 
-const pageTitles: Record<string, string> = { ledger: "账目", accounts: "账户", imports: "账单导入", categories: "分类管理" };
+const bookPages = [
+  { id: "ledger", title: "账目", mobileTitle: "账目", subtitle: "查看收支明细，按月份、账户或类型筛选。", icon: BookOpen },
+  { id: "accounts", title: "账户", mobileTitle: "账户", subtitle: "查看余额、投资估值和信用卡欠款。", icon: Wallet },
+  { id: "imports", title: "账单导入", mobileTitle: "导入", subtitle: "支持微信、支付宝和招商银行账单，核对后再入账。", icon: Upload },
+  { id: "categories", title: "分类管理", mobileTitle: "分类", subtitle: "管理记账时可选的收支分类和显示顺序。", icon: Tags },
+] as const;
+
+function BookNavLink({ item, page, mobile }: { item: typeof bookPages[number]; page: string; mobile?: boolean }) {
+  const active = item.id === page;
+  return <Link href={`/${item.id}`} className={cn(!mobile && "nav-item", active && "active")} aria-current={active ? "page" : undefined}>
+    <item.icon aria-hidden="true" /><span>{mobile ? item.mobileTitle : item.title}</span>
+  </Link>;
+}
+
 function notify(title: string) { toast.add({ title, type: "success" }); }
 
 type BookAppProps = { initial: Book; today: string; user?: { name: string; email: string | null }; children: ReactNode };
@@ -39,7 +52,7 @@ function BookWorkspace({ today, user, state, children, modal, setModal }: BookAp
   const discardDrafts = useDiscardDrafts();
   const router = useRouter();
   const page = usePathname().split("/")[1];
-  const [showWelcomeNote, setShowWelcomeNote] = useState(true);
+  const currentPage = bookPages.find(item => item.id === page) ?? bookPages[0];
   function returnToEntry() {
     discardDrafts(() => router.push("/ledger"), ["category", "import"]);
   }
@@ -79,26 +92,25 @@ function BookWorkspace({ today, user, state, children, modal, setModal }: BookAp
       <div className="book-switch"><span className="book-avatar"><Sprout /></span><div><strong>{`${user?.name ?? "我"}的账本`}</strong><span>一个人的小日子</span></div><Badge variant="outline">个人</Badge></div>
       <p className="nav-caption">我的账本</p>
       <nav aria-label="主导航" className="desktop-nav">
-        <Link href="/ledger" className={cn("nav-item", page === "ledger" && "active")} aria-current={page === "ledger" ? "page" : undefined}><BookOpen /><span>账目</span><span className="nav-dot" /></Link>
-        <Link href="/accounts" className={cn("nav-item", page === "accounts" && "active")} aria-current={page === "accounts" ? "page" : undefined}><Wallet /><span>账户</span></Link>
-        <Link href="/imports" className={cn("nav-item", page === "imports" && "active")} aria-current={page === "imports" ? "page" : undefined}><Upload /><span>账单导入</span></Link>
-        <Link href="/categories" className={cn("nav-item", page === "categories" && "active")} aria-current={page === "categories" ? "page" : undefined}><Tags /><span>分类管理</span></Link>
+        {bookPages.map(item => <BookNavLink key={item.id} item={item} page={page} />)}
       </nav>
-      <div className="sidebar-note"><Leaf /><p>每一笔小小的记录，<br />都在靠近想要的生活。</p><div className="note-line" /></div>
-      <div className="sidebar-bottom"><Button variant="ghost" onClick={() => setModal({ type: "about" })}><CircleHelp data-icon="inline-start" />账本与设置</Button><span>年年有鱼 · 慢慢积累，岁岁有余</span></div>
+      <div className="sidebar-bottom">慢慢积累，岁岁有余</div>
     </aside>
 
     <div className="workspace">
       <header className="topbar">
-        <div className="breadcrumb"><span>{`${user?.name ?? "我"}的账本`}</span><ChevronRight /><strong>{pageTitles[page]}</strong></div>
-        <span className="mobile-brand"><Fish />年年有鱼</span>
-        <div className="topbar-end"><Button variant="ghost" size="sm" aria-label="账本与设置" onClick={() => setModal({ type: "about" })}><Settings data-icon="inline-start" /><span>账本与设置</span></Button><span className="profile-avatar" title={user?.name}>{user?.name?.slice(0, 1) ?? "我"}</span></div>
+        <div className="breadcrumb"><span>{`${user?.name ?? "我"}的账本`}</span><ChevronRight aria-hidden="true" /><strong>{currentPage.title}</strong></div>
+        <Link href="/ledger" className="mobile-brand"><Fish aria-hidden="true" />年年有鱼</Link>
+        <nav className="topbar-end" aria-label="账本辅助导航">
+          <Link href="/wiki" className={buttonVariants({ variant: "ghost", size: "sm" })}>项目 Wiki</Link>
+          <Button variant="ghost" size="sm" aria-label="账本与设置" onClick={() => setModal({ type: "about" })}><Settings data-icon="inline-start" /><span>设置</span></Button>
+        </nav>
       </header>
 
       <main className="main-content">
-        {showWelcomeNote && <div className="welcome-note"><Sparkles /><p>{book.accounts.length ? "记录已保存到你的个人账本，手机和电脑登录后可以接着记。" : "从一个账户开始：记下现在的余额，再慢慢记录之后的每一笔。"}</p><Button variant="ghost" size="icon-sm" aria-label="收起提示" onClick={() => setShowWelcomeNote(false)}><X /></Button></div>}
+        {!book.accounts.length && <div className="welcome-note"><Sparkles aria-hidden="true" /><p>先添加一个账户并填写当前余额，就可以开始记账。</p></div>}
         {syncError && <Alert className="sync-warning"><AlertDescription>{syncError}</AlertDescription>{syncError.includes("登录") ? <Link href="/login" target="_blank" rel="noopener noreferrer">重新登录</Link> : <Button variant="outline" size="sm" onClick={() => void refresh()}>重新同步</Button>}</Alert>}
-        <div className="page-heading" data-page={page}><div><p className="eyebrow">{page === "ledger" ? "LITTLE MOMENTS, EVERY DAY" : page === "accounts" ? "A LITTLE MORE PEACE OF MIND" : page === "imports" ? "BRING YOUR MOMENTS TOGETHER" : "A PLACE FOR EVERY LITTLE THING"}</p><h1>{pageTitles[page]}</h1><p className="page-subtitle">{page === "ledger" ? "日子，一笔一笔。记下生活的点滴。" : page === "accounts" ? "家底，一目了然。钱在哪里，还有多少，都在这里。" : page === "imports" ? "微信、支付宝和招商银行 · 先核对，再入账。" : "把生活分得刚刚好。只会改变你自己的账本。"}</p></div>
+        <div className="page-heading" data-page={page}><div><h1>{currentPage.title}</h1><p className="page-subtitle">{currentPage.subtitle}</p></div>
           {(page === "ledger" || page === "accounts") && <Button size="lg" onClick={() => page === "ledger" ? startEntry() : setModal({ type: "account" })}><Plus data-icon="inline-start" />{page === "ledger" ? "记一笔" : "添加账户"}</Button>}{page === "categories" && modal?.type === "entry" && <Button variant="outline" onClick={returnToEntry}><ChevronLeft data-icon="inline-start" />返回记账</Button>}
         </div>
 
@@ -107,7 +119,11 @@ function BookWorkspace({ today, user, state, children, modal, setModal }: BookAp
       </main>
     </div>
 
-    <nav className="mobile-nav" aria-label="移动端导航"><Link href="/ledger" className={cn(page === "ledger" && "active")} aria-current={page === "ledger" ? "page" : undefined}><BookOpen /><span>账目</span></Link><Button size="lg" onClick={startEntry}><Plus data-icon="inline-start" />记一笔</Button><Link href="/accounts" className={cn(page === "accounts" && "active")} aria-current={page === "accounts" ? "page" : undefined}><Wallet /><span>账户</span></Link><button onClick={() => setModal({ type: "about" })} aria-label="账本与设置"><Settings /><span>设置</span></button></nav>
+    <nav className="mobile-nav" aria-label="移动端导航">
+      {bookPages.slice(0, 2).map(item => <BookNavLink key={item.id} item={item} page={page} mobile />)}
+      <Button onClick={startEntry}><Plus data-icon="inline-start" />记一笔</Button>
+      {bookPages.slice(2).map(item => <BookNavLink key={item.id} item={item} page={page} mobile />)}
+    </nav>
 
     {modal?.type === "entry" && <EntryDialog book={book} today={today} transaction={modal.transaction} onClose={() => setModal(null)} onSave={save} saving={saving} onManageCategories={manageCategories} open={page !== "categories"} />}
     {modal?.type === "account" && <AccountDialog book={book} today={today} account={modal.account} onClose={() => setModal(current => current?.type === "entry" ? current : null)} onSave={async (account, balance) => { await saveAccount(account, balance); if (modal.continueEntry) setModal({ type: "entry" }); }} saving={saving} />}
