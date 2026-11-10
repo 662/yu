@@ -1,4 +1,4 @@
-import { classifyRow } from './review';
+import { classifyMovement, classifyRow, movementAccountSide, type MovementType } from './review';
 import { activeCategories } from '../book/categories';
 import type { Book, TransactionInput } from '../book/ledger';
 import { receiptKey } from './commands';
@@ -13,26 +13,45 @@ export function suggestCategory(book: Book, row: BillRow, kind: 'expense' | 'inc
   return rules.find(([pattern,id]) => pattern.test(text) && categories.some(c => c.id === id))?.[1] ?? categories.find(c => c.id === (kind === 'income' ? '其他收入' : 'other'))?.id ?? categories[0]?.id ?? '';
 }
 export function suggestAccount(book: Book, method: string, source: Source) {
+  const exact = book.accounts.filter(a => a.name === method);
+  if (exact.length) return exact.length === 1 ? exact[0].id : '';
+  if (method === '余额宝' || /零钱通/.test(method)) return '';
   const tail = method.match(/(?:\(|（|尾号\s*)(\d{4})(?:\)|）|$)/)?.[1];
-  const matches = book.accounts.filter(a => tail ? `${a.name} ${a.note}`.includes(tail) : a.name === method || (source === 'wechat' && /零钱/.test(method) && /微信|零钱/.test(a.name)) || (source === 'alipay' && /余额/.test(method) && /支付宝|余额宝/.test(a.name)));
+  const matches = book.accounts.filter(a => tail ? `${a.name} ${a.note}`.includes(tail) : (source === 'wechat' && /零钱/.test(method) && /微信|零钱/.test(a.name) && !/零钱通/.test(a.name)) || (source === 'alipay' && /余额/.test(method) && /支付宝/.test(a.name) && !/余额宝/.test(a.name)));
   return matches.length === 1 ? matches[0].id : '';
 }
+
+function mappedSide(row: BillRow, movement: MovementType) {
+  return movementAccountSide(movement, row.method) ||
+    (row.direction === 'income' ? 'to' : row.direction === 'expense' ? 'from' : '');
+}
+
+export function suggestedAccounts(row: BillRow, movement: MovementType, account: string, kind: Exclude<Decision, 'auto' | 'skip'>) {
+  if (kind === 'income') return { from: '', to: account };
+  if (kind === 'expense') return { from: account, to: '' };
+  const side = mappedSide(row, movement);
+  return { from: side === 'from' ? account : '', to: side === 'to' ? account : '' };
+}
+
 export function previewRow(book: Book, source: Source, row: BillRow, mapping: Record<string,string>, edit: RowEdit = {}, earlierKeys = new Set<string>()) {
   const account = mapping[row.method] ?? '';
   const key = receiptKey(source, row.key, account);
   const imported = (book.imports ?? []).some(b => !b.rolledBack && b.source === source && b.items.some(item => item.key === key));
   const repeated = earlierKeys.has(key);
-  const similar = account && book.transactions.some(t => t.date === row.date && t.amount === row.amount && t.entries.some(e => e.accountId === account && Math.sign(e.amount) === (row.direction === 'income' ? 1 : -1)));
+  const movement = classifyMovement(source, row);
+  const side = mappedSide(row, movement);
+  const similar = account && book.transactions.some(t => t.date === row.date && t.amount === row.amount && t.entries.some(e => e.accountId === account && (!side || Math.sign(e.amount) === (side === 'to' ? 1 : -1))));
   const reason = row.issue || (imported ? '这笔流水已经导入' : repeated ? '文件内订单号重复' : similar ? '已有同日、同金额、同账户流水，可能重复' : row.review);
   const blocked = Boolean(row.issue || imported || repeated);
   const decision = edit.decision ?? 'auto';
   const kind = decision === 'auto' ? reason || row.direction === 'neutral' ? 'skip' : row.direction : decision;
+  const defaults = kind === 'skip' ? null : suggestedAccounts(row, movement, account, kind);
   const input: TransactionInput | null = blocked || kind === 'skip' ? null : {
     kind, date: row.date, amount: row.amount,
     category: kind === 'expense' || kind === 'income' ? edit.category ?? suggestCategory(book, row, kind) : kind === 'repayment' ? '信用卡还款' : '账户转账',
-    from: kind === 'income' ? '' : edit.from ?? (row.direction === 'income' && (kind === 'transfer' || kind === 'repayment') ? '' : account),
-    to: kind === 'expense' ? '' : edit.to ?? (row.direction === 'income' ? account : ''),
+    from: kind === 'income' ? '' : edit.from ?? defaults?.from ?? '',
+    to: kind === 'expense' ? '' : edit.to ?? defaults?.to ?? '',
     note: (edit.note ?? [row.peer, row.description].filter(v => v && v !== '/').join(' · ')).slice(0,200), reimbursable: false,
   };
-  return { key, input, reason, blocked, kind, group: classifyRow(row, blocked, Boolean(similar)) };
+  return { key, input, reason, blocked, kind, movement, group: classifyRow(row, blocked, Boolean(similar)) };
 }

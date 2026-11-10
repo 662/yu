@@ -8,7 +8,7 @@ import { Field, FieldLabel, FieldGroup, FieldError } from '@/components/ui/field
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { reviewGroups, reviewState, applyGroupDecision, isBulkEditable, preserveSelections, type ReviewGroup } from './review';
+import { movementActions, movementTypes, reviewGroups, reviewState, applyGroupDecision, isBulkEditable, preserveSelections, type MovementType, type ReviewGroup } from './review';
 import { ConfirmAction } from '@/components/confirm-action';
 import { toast } from '@/components/ui/toast';
 import { useDraftProtection } from '../book/draft-protection';
@@ -17,7 +17,7 @@ import { activeCategories } from '../book/categories';
 import { createTransaction, money, type Book } from '../book/ledger';
 import type { Command } from '../book/commands';
 import { readBill } from './files';
-import { previewRow, suggestAccount, type RowEdit, type Decision } from './preview';
+import { previewRow, suggestAccount, suggestedAccounts, type RowEdit, type Decision } from './preview';
 import { sourceNames, sources, type ParsedBill, type Source } from './types';
 
 function notify(title: string) { toast.add({ title, type: 'success' }); }
@@ -31,7 +31,8 @@ export function ImportPage({ book, saving, onCommand, onAddAccount }: { book: Bo
   const [group,setGroup] = useState<ReviewGroup>('ordinary');
   const [bulkDecision,setBulkDecision] = useState<Decision>('skip');
   const [methodFilter,setMethodFilter] = useState(''); const [categoryFilter,setCategoryFilter] = useState('');
-  const [bulkFrom,setBulkFrom] = useState(''); const [bulkTo,setBulkTo] = useState('');
+  const [movementFilter,setMovementFilter] = useState<MovementType | ''>('');
+  const [bulkFrom,setBulkFrom] = useState<string>(); const [bulkTo,setBulkTo] = useState<string>();
   const [done,setDone] = useState<number[]>([]);
   const [step,setStep] = useState('1');
   const [page,setPage] = useState(0); const [view,setView] = useState('all'); const [confirm,setConfirm] = useState(false);
@@ -44,7 +45,7 @@ export function ImportPage({ book, saving, onCommand, onAddAccount }: { book: Bo
     setLoading(true); setError(''); setConfirm(false); setStep('1');
     try {
       const parsed = await readBill(file, source === 'auto' ? undefined : source as Source, month, password);
-      setMethodFilter('');setCategoryFilter('');setDone([]);setGroup('ordinary');setBulkDecision('skip');setBulkFrom('');setBulkTo('');setBill(parsed); setFilename(file.name.slice(0,200)); setEdits({}); setPage(0); setView('all'); setBatchId(crypto.randomUUID());
+      setMethodFilter('');setCategoryFilter('');setMovementFilter('');setDone([]);setGroup('ordinary');resetBulk();setBill(parsed); setFilename(file.name.slice(0,200)); setEdits({}); setPage(0); setView('all'); setBatchId(crypto.randomUUID());
       setMapping(Object.fromEntries([...new Set(parsed.rows.map(r => r.method))].map(method => [method, suggestAccount(book, method, parsed.source)])));
       setPassword('');
     } catch (e) { setError(e instanceof Error ? e.message : '无法读取文件，请重新导出账单'); }
@@ -64,16 +65,31 @@ export function ImportPage({ book, saving, onCommand, onAddAccount }: { book: Bo
   const blocked = remaining.filter(p => p.blocked);
   const discardPreview = useDraftProtection("import", !!bill && remaining.length > 0);
   const allGroupRows = remaining.filter(p => p.group === group);
-  const groupRows = allGroupRows.filter(p => (!methodFilter || p.row.method === methodFilter) && (!categoryFilter || p.row.category === categoryFilter));
+  const movementRows = allGroupRows.filter(p => !movementFilter || p.movement === movementFilter);
+  const groupRows = movementRows.filter(p => (!methodFilter || p.row.method === methodFilter) && (!categoryFilter || p.row.category === categoryFilter));
   const bulkRows = groupRows.filter(p => !p.blocked && isBulkEditable(edits[p.index]));
   const visible = (view === 'invalid' ? invalid : groupRows.filter(p => view === 'all' || reviewState(p, edits[p.index]) === view));
   const batch = selected.slice(0,500);
+  const movementAction = movementFilter ? movementActions[movementFilter] : undefined;
   const bulkActions: {value: Decision; label: string}[] = group === 'ordinary' || group === 'duplicate'
     ? [{value:'auto',label:'按原收支保留'}, {value:'skip',label:'跳过'}, {value:'expense',label:'记为支出'}, {value:'income',label:'记为收入'}]
     : group === 'refund' ? [{value:'skip',label:'暂不导入'}, {value:'income',label:'记为收入'}]
-    : [{value:'skip',label:'跳过'}, {value:group === 'repayment' ? 'repayment' : 'transfer',label:group === 'repayment' ? '记为还款' : '记为转账'}];
+    : [{value:'skip',label:'跳过'}];
+  if (group === 'movement' && movementAction) bulkActions.push({value:movementAction,label:movementAction === 'income' ? '记为收入' : '记为转账'});
+  if (group === 'repayment') bulkActions.push({value:'repayment',label:'记为还款'});
+  const needsBoth = bulkDecision === 'transfer' || bulkDecision === 'repayment';
+  const needsIncomeAccount = group === 'movement' && bulkDecision === 'income';
+  const hints = needsBoth || needsIncomeAccount
+    ? bulkRows.map(({row, movement}) => suggestedAccounts(row, movement, mapping[row.method] ?? '', bulkDecision))
+    : [];
+  const commonAccount = (side: 'from' | 'to') => hints.every(hint => hint[side] === hints[0]?.[side]) ? hints[0]?.[side] ?? '' : '';
+  const from = bulkFrom ?? commonAccount('from');
+  const to = bulkTo ?? commonAccount('to');
+  function resetBulk(decision: Decision = 'skip') {
+    setBulkDecision(decision);setBulkFrom(undefined);setBulkTo(undefined);
+  }
   function applyBulk() {
-    setEdits(prev => applyGroupDecision(groupRows, prev, bulkDecision, bulkFrom, bulkTo));
+    setEdits(prev => applyGroupDecision(groupRows, prev, bulkDecision, needsBoth ? from : '', needsBoth || needsIncomeAccount ? to : ''));
     setConfirm(false);setError('');
   }
   const pages = Math.max(1,Math.ceil(visible.length/20)); const currentPage = Math.min(page,pages-1);
@@ -110,28 +126,43 @@ export function ImportPage({ book, saving, onCommand, onAddAccount }: { book: Bo
         <ToggleGroupItem value="1">2 · 确认账户</ToggleGroupItem><ToggleGroupItem value="2">3 · 核对账目</ToggleGroupItem><ToggleGroupItem value="3">4 · 确认入账</ToggleGroupItem>
       </ToggleGroup>
       {bill.warnings.map(w=><p className="form-hint" key={w}>{w}</p>)}
-      <section className="import-mappings" hidden={step !== '1'}><h3>2 · 确认支付账户</h3><p>银行卡付款选对应银行卡，零钱和余额选平台账户。不会自动创建或合并账户。</p><FieldGroup>{[...new Set(bill.rows.map(r=>r.method))].map((method,i)=><Field key={method}><FieldLabel htmlFor={`import-map-${i}`}>{method}</FieldLabel><NativeSelect id={`import-map-${i}`} value={mapping[method] ?? ''} disabled={busy} onChange={e=>{setMapping(m=>({...m,[method]:e.target.value}));setConfirm(false);}}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>)}</FieldGroup><div className="import-step-actions"><Button disabled={busy} onClick={() => setStep('2')}>下一步：核对账目<ArrowRight data-icon="inline-end" /></Button></div></section>
+      <section className="import-mappings" hidden={step !== '1'}><h3>2 · 确认支付账户</h3><p>银行卡选对应银行卡，平台余额和理财账户按账本的实际记录方式选择。这里的映射只提供已知的一端，转账还需要确认另一端。</p><FieldGroup>{[...new Set(bill.rows.map(r=>r.method))].map((method,i)=><Field key={method}><FieldLabel htmlFor={`import-map-${i}`}>{method}</FieldLabel><NativeSelect id={`import-map-${i}`} value={mapping[method] ?? ''} disabled={busy} onChange={e=>{setMapping(m=>({...m,[method]:e.target.value}));setConfirm(false);}}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>)}</FieldGroup><div className="import-step-actions"><Button disabled={busy} onClick={() => setStep('2')}>下一步：核对账目<ArrowRight data-icon="inline-end" /></Button></div></section>
       <div hidden={step !== '2'} className="import-review-stage"><section className="import-review" aria-label="按原因批量处理">
         <h3>3 · 按组处理，不必逐笔翻找</h3>
-        <ToggleGroup className="flex-wrap" variant="outline" value={[group]} onValueChange={v=>{if(v[0]){setGroup(v[0] as ReviewGroup);setMethodFilter('');setCategoryFilter('');setView('all');setPage(0);setBulkDecision('skip');setBulkFrom('');setBulkTo('');}}} aria-label="账单分组" disabled={busy}>
+        <ToggleGroup className="flex-wrap" variant="outline" value={[group]} onValueChange={v=>{if(v[0]){setGroup(v[0] as ReviewGroup);setMethodFilter('');setCategoryFilter('');setMovementFilter('');setView('all');setPage(0);resetBulk();}}} aria-label="账单分组" disabled={busy}>
           {Object.entries(reviewGroups).map(([key,info])=><ToggleGroupItem key={key} value={key}>{info.title} · {remaining.filter(p=>p.group===key).length}</ToggleGroupItem>)}
         </ToggleGroup>
         <p>{reviewGroups[group].description}</p>
+        {group === 'movement' && <ToggleGroup className="flex-wrap" variant="outline" value={[movementFilter || 'all']} onValueChange={v=>{
+          if (!v[0]) return;
+          setMovementFilter(v[0] === 'all' ? '' : v[0] as MovementType);
+          setMethodFilter('');setCategoryFilter('');setView('all');setPage(0);resetBulk();
+        }} aria-label="资金往来用途" disabled={busy}>
+          <ToggleGroupItem value="all">全部用途 · {allGroupRows.length}</ToggleGroupItem>
+          {Object.entries(movementTypes).map(([key,label])=>{
+            const count = allGroupRows.filter(p=>p.movement===key).length;
+            return count > 0 && <ToggleGroupItem key={key} value={key}>{label} · {count}</ToggleGroupItem>;
+          })}
+        </ToggleGroup>}
         <FieldGroup className="import-bulk-accounts">
-          <Field><FieldLabel htmlFor="group-method">缩小范围：支付方式</FieldLabel><NativeSelect id="group-method" value={methodFilter} disabled={busy} onChange={e=>{setMethodFilter(e.target.value);setPage(0);}}><NativeSelectOption value="">所有支付方式</NativeSelectOption>{[...new Set(allGroupRows.map(p=>p.row.method))].map(method=><NativeSelectOption key={method} value={method}>{method}</NativeSelectOption>)}</NativeSelect></Field>
-          <Field><FieldLabel htmlFor="group-category">原始交易分类</FieldLabel><NativeSelect id="group-category" value={categoryFilter} disabled={busy} onChange={e=>{setCategoryFilter(e.target.value);setPage(0);}}><NativeSelectOption value="">所有原始分类</NativeSelectOption>{[...new Set(allGroupRows.map(p=>p.row.category))].filter(Boolean).map(category=><NativeSelectOption key={category} value={category}>{category}</NativeSelectOption>)}</NativeSelect></Field>
+          <Field><FieldLabel htmlFor="group-method">缩小范围：支付方式</FieldLabel><NativeSelect id="group-method" value={methodFilter} disabled={busy} onChange={e=>{setMethodFilter(e.target.value);setPage(0);resetBulk(bulkDecision);}}><NativeSelectOption value="">所有支付方式</NativeSelectOption>{[...new Set(movementRows.map(p=>p.row.method))].map(method=><NativeSelectOption key={method} value={method}>{method}</NativeSelectOption>)}</NativeSelect></Field>
+          <Field><FieldLabel htmlFor="group-category">原始交易分类</FieldLabel><NativeSelect id="group-category" value={categoryFilter} disabled={busy} onChange={e=>{setCategoryFilter(e.target.value);setPage(0);resetBulk(bulkDecision);}}><NativeSelectOption value="">所有原始分类</NativeSelectOption>{[...new Set(movementRows.map(p=>p.row.category))].filter(Boolean).map(category=><NativeSelectOption key={category} value={category}>{category}</NativeSelectOption>)}</NativeSelect></Field>
         </FieldGroup>
         <p>当前范围 {groupRows.length} 笔，合计 ¥{money(groupRows.reduce((n,p)=>n+p.row.amount,0))}（交易金额合计，不代表净收支）。</p>
         {group !== 'blocked' && <>
-          <p>当前范围可批量设置 {bulkRows.length} 笔。可重复调整批量设置；已单独设置的记录会保留。应用范围包含当前支付方式和原始分类下的所有页，不受下方状态筛选影响。</p>
-          <ToggleGroup className="flex-wrap" variant="outline" value={[bulkDecision]} onValueChange={v=>{if(v[0])setBulkDecision(v[0] as Decision);}} aria-label="本组批量记账方式" disabled={busy}>
+          <p>当前范围可批量设置 {bulkRows.length} 笔。可重复调整批量设置；已单独设置的记录会保留。应用范围包含当前用途、支付方式和原始分类下的所有页，不受下方状态筛选影响。</p>
+          <ToggleGroup className="flex-wrap" variant="outline" value={[bulkDecision]} onValueChange={v=>{if(v[0])resetBulk(v[0] as Decision);}} aria-label="本组批量记账方式" disabled={busy}>
             {bulkActions.map(a=><ToggleGroupItem key={a.value} value={a.value}>{a.label}</ToggleGroupItem>)}
           </ToggleGroup>
-          {(bulkDecision==='transfer'||bulkDecision==='repayment') && <FieldGroup className="import-bulk-accounts">
-            <Field><FieldLabel htmlFor="bulk-from">统一付款账户</FieldLabel><NativeSelect id="bulk-from" value={bulkFrom} disabled={busy} onChange={e=>setBulkFrom(e.target.value)}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>
-            <Field><FieldLabel htmlFor="bulk-to">统一收款账户{bulkDecision==='repayment'?'（信用卡）':''}</FieldLabel><NativeSelect id="bulk-to" value={bulkTo} disabled={busy} onChange={e=>setBulkTo(e.target.value)}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>
+          {group === 'movement' && !movementFilter && <p>选择具体用途后，可批量设置该用途的记账方式。</p>}
+          {needsBoth && <p>从实际扣款账户转到实际到账账户，两端都需要是你账本中的账户。已确认的支付方式可带出其中一端。</p>}
+          {needsIncomeAccount && <p>选择实际收到收益的账户。收入会计入账本的收入统计。</p>}
+          {(needsBoth || needsIncomeAccount) && <FieldGroup className="import-bulk-accounts">
+            {needsBoth && <Field><FieldLabel htmlFor="bulk-from">转出账户</FieldLabel><NativeSelect id="bulk-from" value={from} disabled={busy} onChange={e=>setBulkFrom(e.target.value)}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>}
+            <Field><FieldLabel htmlFor="bulk-to">{needsIncomeAccount?'收益入账账户':bulkDecision==='repayment'?'待还款的信用卡':'转入账户'}</FieldLabel><NativeSelect id="bulk-to" value={to} disabled={busy} onChange={e=>setBulkTo(e.target.value)}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>
           </FieldGroup>}
-          <Button variant="outline" disabled={busy||!bulkRows.length||((bulkDecision==='transfer'||bulkDecision==='repayment')&&(!bulkFrom||!bulkTo||bulkFrom===bulkTo))} onClick={applyBulk}>应用到当前范围 {bulkRows.length} 笔</Button>
+          {needsBoth && from && from === to && <FieldError>请选择两个不同的账户</FieldError>}
+          <Button variant="outline" disabled={busy||!bulkRows.length||(needsBoth&&(!from||!to||from===to))||(needsIncomeAccount&&!to)} onClick={applyBulk}>应用到当前范围 {bulkRows.length} 笔</Button>
         </>}
       </section>
       <ToggleGroup className="flex-wrap" variant="outline" value={[view]} onValueChange={v=>{if(v[0]){setView(v[0]);setPage(0);}}} aria-label="筛选导入明细">
@@ -145,10 +176,10 @@ export function ImportPage({ book, saving, onCommand, onAddAccount }: { book: Bo
         <div className="import-row-title"><div><strong>{p.row.peer || p.row.description || '未注明交易对方'}</strong><span>{p.row.time.startsWith(p.row.date) ? p.row.time : `${p.row.date}（原始 ${p.row.time}）`} · 原始第 {p.row.line} 行</span></div><strong>¥{money(p.row.amount)}</strong></div>
         <p className="import-row-description">{p.row.description || p.row.category} · {p.row.direction==='income'?'平台收入':p.row.direction==='expense'?'平台支出':'平台不计收支'} · {p.row.method} {p.row.status && `· ${p.row.status}`}</p>
         <Badge variant="secondary">{p.blocked?'无法导入':p.validation?'需补全':p.input?'已选入账':edits[p.index]?.decision==='skip'?'主动跳过':'尚未决定'}</Badge>
-        {p.reason && <p className="import-row-warning">{p.reason}</p>}
+        {p.reason && <p className="import-row-warning">{p.group === 'movement' && p.movement !== 'other' ? movementTypes[p.movement] : p.reason}</p>}
         <FieldGroup className="import-row-fields"><Field><FieldLabel htmlFor={`import-action-${p.index}`}>如何记账</FieldLabel><NativeSelect id={`import-action-${p.index}`} value={edits[p.index]?.decision ?? 'auto'} disabled={busy || p.blocked} onChange={e=>patch(p.index,{decision:e.target.value as Decision,category:undefined,from:undefined,to:undefined})}><NativeSelectOption value="auto">{p.blocked?'不可导入':p.kind === 'skip'?'自动：尚未决定':'自动：'+(p.kind==='income'?'收入':'支出')}</NativeSelectOption><NativeSelectOption value="skip">跳过</NativeSelectOption><NativeSelectOption value="expense">支出</NativeSelectOption><NativeSelectOption value="income">收入</NativeSelectOption><NativeSelectOption value="transfer">账户转账</NativeSelectOption><NativeSelectOption value="repayment">信用卡还款</NativeSelectOption></NativeSelect></Field>
           {p.input && (p.input.kind==='expense' || p.input.kind==='income') && <Field><FieldLabel htmlFor={`import-category-${p.index}`}>分类</FieldLabel><NativeSelect id={`import-category-${p.index}`} value={p.input.category} disabled={busy} onChange={e=>patch(p.index,{category:e.target.value})}>{activeCategories(book,p.input.kind).map(c=><NativeSelectOption key={c.id} value={c.id}>{c.name}</NativeSelectOption>)}</NativeSelect></Field>}
-          {p.input && <>{p.input.kind!=='income' && <Field><FieldLabel htmlFor={`import-from-${p.index}`}>付款账户</FieldLabel><NativeSelect id={`import-from-${p.index}`} value={p.input.from} disabled={busy} onChange={e=>patch(p.index,{from:e.target.value})}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>}{p.input.kind!=='expense' && <Field><FieldLabel htmlFor={`import-to-${p.index}`}>收款账户</FieldLabel><NativeSelect id={`import-to-${p.index}`} value={p.input.to} disabled={busy} onChange={e=>patch(p.index,{to:e.target.value})}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>}</>}
+          {p.input && <>{p.input.kind!=='income' && <Field><FieldLabel htmlFor={`import-from-${p.index}`}>{p.input.kind==='transfer'?'转出账户':'付款账户'}</FieldLabel><NativeSelect id={`import-from-${p.index}`} value={p.input.from} disabled={busy} onChange={e=>patch(p.index,{from:e.target.value})}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>}{p.input.kind!=='expense' && <Field><FieldLabel htmlFor={`import-to-${p.index}`}>{p.input.kind==='transfer'?'转入账户':p.input.kind==='repayment'?'待还款的信用卡':'收款账户'}</FieldLabel><NativeSelect id={`import-to-${p.index}`} value={p.input.to} disabled={busy} onChange={e=>patch(p.index,{to:e.target.value})}><NativeSelectOption value="">请选择账户</NativeSelectOption>{accounts}</NativeSelect></Field>}</>}
         </FieldGroup>{p.validation && <FieldError>{p.validation}</FieldError>}
       </article>)}</div>
       <div className="import-pagination"><span>第 {currentPage+1} / {pages} 页 · {visible.length} 笔</span><Button variant="ghost" size="sm" aria-label="上一页账单" disabled={!currentPage} onClick={()=>setPage(currentPage-1)}><ArrowLeft /></Button><Button variant="ghost" size="sm" aria-label="下一页账单" disabled={currentPage>=pages-1} onClick={()=>setPage(currentPage+1)}><ArrowRight /></Button></div>

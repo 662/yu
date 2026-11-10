@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { classifyRow, applyGroupDecision, reviewState, preserveSelections } from './review';
-import { previewRow, type RowEdit } from './preview';
+import { previewRow, suggestAccount, type RowEdit } from './preview';
 import { defaultCategories } from '../book/categories';
 import { createTransaction, type Book } from '../book/ledger';
 import type { BillRow } from './types';
@@ -41,6 +41,36 @@ test('bulk applies across pages, protects individual choices and hard exclusions
 test('explicitly retaining mixed-direction duplicates preserves each original direction',()=>{
  const edits=applyGroupDecision([{index:0,blocked:false,row},{index:1,blocked:false,row:{...row,direction:'income'}}],{},'auto');
  assert.equal(edits[0].decision,'expense');assert.equal(edits[1].decision,'income');
+});
+
+test('Alipay investment movements suggest a direction but require an explicit decision',()=>{
+ const investment = {...row,category:'投资理财',direction:'neutral',method:'余额宝'} as const;
+ const mapping = {余额宝:'wallet',银行卡:'bank'};
+ const buy = {...investment,description:'某基金-买入'};
+ const sell = {...investment,description:'某基金-卖出至余额宝'};
+ const yieldRow = {...investment,description:'余额宝-收益发放'};
+ const deposit = {...investment,description:'余额宝-单次转入',method:'某银行储蓄卡'};
+ const withdrawal = {...deposit,description:'余额宝-转出到银行卡'};
+ const cases = [
+   [buy,'purchase','transfer','wallet',''],
+   [sell,'redemption','transfer','','wallet'],
+   [yieldRow,'yield','income','','wallet'],
+   [deposit,'deposit','transfer','bank',''],
+   [withdrawal,'withdrawal','transfer','','bank'],
+ ] as const;
+ for (const [billRow,movement,decision,from,to] of cases) {
+   const accounts = {...mapping,某银行储蓄卡:'bank'};
+   const pending = previewRow(book,'alipay',billRow,accounts);
+   assert.equal(pending.movement,movement);
+   assert.equal(pending.input,null);
+   const chosen = previewRow(book,'alipay',billRow,accounts,{decision});
+   assert.equal(chosen.input?.from,from);
+   assert.equal(chosen.input?.to,to);
+ }
+ assert.equal(previewRow(book,'wechat',buy,mapping).movement,'other');
+ assert.equal(previewRow(book,'alipay',{...buy,category:'其他'},mapping,{decision:'transfer'}).input?.from,'');
+ assert.equal(previewRow(book,'alipay',buy,mapping,{decision:'transfer',from:''}).input?.from,'');
+ assert.equal(suggestAccount({...book,accounts:[{...book.accounts[1],name:'支付宝'}]},'余额宝','alipay'),'');
 });
 
 test('a successful 500-row batch preserves remaining choices despite new soft duplicates',()=>{
